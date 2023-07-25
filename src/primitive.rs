@@ -83,11 +83,6 @@ impl Http2Integer {
         let mut value = self.value.clone();
         value.reverse();
 
-        for v in &value {
-            print!("{:b} ", v);
-        }
-        println!("\n");
-
         // Subtract the maximum value from the value and take care of the carry.
         for i in 0..value.len() {
             match value[i].checked_sub(max_value) {
@@ -99,10 +94,6 @@ impl Http2Integer {
                     value[i] = value[i].overflowing_sub(max_value).0;
                 }
             }
-        }
-
-        for v in &value {
-            print!("{:b} ", v);
         }
 
         // Encode the prefix.
@@ -142,33 +133,30 @@ impl Http2Integer {
             result.push(chunk | 0x80);
         }
 
-        println!("\n yo");
-        for v in &result {
-            print!("{:b} ", v);
-        }
-
-
         Ok(result)
     }
 
-    // Decode an Http2Integer.
-    //
-    // Pseudocode to decode an integer I is as follows:
-    //
-    // decode I from the next N bits
-    // if I < 2^N - 1, return I
-    // else
-    //     M = 0
-    //     repeat
-    //         B = next octet
-    //         I = I + (B & 127) * 2^M
-    //         M = M + 7
-    //     while B & 128 == 128
-    //     return I
-    //
-    // # Arguments
-    //
-    // * `n` - The number of bits of the prefix.
-    // * `value` - The value as a list of octets.
-    // pub fn decode(n: u8, value: Vec<u8>) -> Result<Self, Http2Error> {}
+    /// Decode an Http2Integer.
+    ///
+    /// # Arguments
+    ///
+    /// * `n` - The number of bits of the prefix.
+    /// * `value` - The value as a list of octets.
+    pub fn decode(n: u8, value: Vec<u8>) -> Result<Self, Http2Error> {
+        // Verify that n <= 8 and n != 0.
+        if n > 8 || n == 0 {
+            return Err(Http2Error::PrimitiveError(
+                "HTTP/2 Integer prefix must be between 1 and 8 bits.".to_string(),
+            ));
+        }
+
+        // Verify that the value is not empty.
+        if value.is_empty() {
+            return Err(Http2Error::PrimitiveError(
+                "Cannot decode an empty HTTP/2 Integer".to_string(),
+            ));
+        }
+
+        
+    }
 }
