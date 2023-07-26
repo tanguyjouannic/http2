@@ -1,4 +1,4 @@
-pub mod table;
+pub mod hpack;
 
 use crate::error::Http2Error;
 

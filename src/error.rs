@@ -5,7 +5,7 @@ use std::fmt;
 pub enum Http2Error {
     FrameError(String),
     NotImplementedError(String),
-    PrimitiveError(String),
+    HpackError(String),
 }
 
 impl fmt::Display for Http2Error {
@@ -16,7 +16,7 @@ impl fmt::Display for Http2Error {
             Http2Error::NotImplementedError(message) => {
                 write!(f, "Not Implemented Error: {}", message)
             }
-            Http2Error::PrimitiveError(message) => write!(f, "Primitive Error: {}", message),
+            Http2Error::HpackError(message) => write!(f, "Hpack Error: {}", message),
         }
     }
 }
