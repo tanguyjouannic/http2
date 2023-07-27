@@ -68,6 +68,5 @@ pub fn test_hpack_integer() {
     assert_eq!(encoded_integer[0], 0b11111010);
 }
 
-// 101 00000110 11101101 : 329 453
-//                  1111 :      15
-// 101 00000110 11011110 : 329 438
+#[test]
+pub fn test_hpack_string() {}
