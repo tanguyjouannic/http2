@@ -1,5 +1,8 @@
 use crate::error::Http2Error;
 use crate::header::{HeaderField, HeaderName, HeaderValue};
+use crate::header::huffman::Tree;
+use core::fmt;
+use std::fmt::{Display, Formatter};
 use std::result;
 
 /// HPACK dynamic header fields table.
@@ -348,16 +351,17 @@ impl HpackString {
         // Decode the length of the string.
         let length = HpackInteger::decode(7, bytes)?;
         let length = length.value as usize;
+        println!("huffman {} length: {}", huffman_encode, length);
 
         // Verify that the string is not empty.
         if length == 0 {
             return Err(Http2Error::HpackError("Invalid string length".to_string()));
         }
 
-        // Verify that the string is not too long.
-        if bytes.len() < length {
-            return Err(Http2Error::HpackError("Invalid string length".to_string()));
-        }
+        // // Verify that the string is not too long.
+        // if bytes.len() < length {
+        //     return Err(Http2Error::HpackError("Invalid string length".to_string()));
+        // }
 
         // Gather the string octets.
         let mut string_octets: Vec<u8> = Vec::new();
@@ -367,13 +371,21 @@ impl HpackString {
 
         // Decode the string if Huffman encoded. TODO
         if huffman_encode {
-            return Err(Http2Error::NotImplementedError(
-                "Huffman encoding not implemented".to_string(),
-            ));
+            let tree: Tree = Tree::new().unwrap();
+            tree.decode(&mut string_octets)?;
         }
+
+        // Delete the bytes that were decoded.
+        *bytes = bytes[length..].to_vec();
 
         Ok(HpackString::new(
             String::from_utf8_lossy(&string_octets).into(),
         ))
+    }
+}
+
+impl ToString for HpackString {
+    fn to_string(&self) -> String {
+        self.s.clone()
     }
 }

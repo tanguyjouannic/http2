@@ -167,6 +167,7 @@ impl Tree {
     pub fn decode(&self, bytes: &mut Vec<u8>) -> Result<String, Http2Error> {
         let mut decoded: Vec<char> = Vec::new();
         let mut directions = Direction::from_bytes(bytes);
+        println!("directions: {:?}", directions);
 
         while !directions.is_empty() {
             match self.root.find(&mut directions) {
