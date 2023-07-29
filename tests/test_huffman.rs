@@ -25,9 +25,20 @@ pub fn test_huffman() {
     assert_eq!(custom_header.to_string(), "custom-header".to_string());
 
     let mut encoded_data: Vec<u8> = vec![
-        0x8c, 0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff,
+        0b11111111, 0b11001111, 0b11111101, 0b01111111,
     ];
-    
-    let custom_key = HpackString::decode(&mut encoded_data).unwrap();
-    println!("custom_key: {}", custom_key.to_string());
+
+    let tree = Tree::new().unwrap();
+
+    let decoded_data = tree.decode(&mut encoded_data).unwrap();
+
+    println!("decoded_data: {:?}", decoded_data);
+
+    //11111111 11001111 11111101 01111111
+
+    let mut encoded_data: Vec<u8> = vec![
+        0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff,
+    ];
+
+    let decoded_data = tree.decode(&mut encoded_data).unwrap();
 }

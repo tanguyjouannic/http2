@@ -66,18 +66,21 @@ impl Node {
             }
         }
 
-        let direction = directions.remove(0);
         match self {
-            Node::Branch(left, right) => match direction {
-                Left => match left {
-                    Some(left_node) => left_node.find(directions),
-                    None => None,
-                },
-                Right => match right {
-                    Some(right_node) => right_node.find(directions),
-                    None => None,
-                },
-            },
+            Node::Branch(left, right) => {   
+                let direction = directions.remove(0);
+
+                match direction {
+                    Left => match left {
+                        Some(left_node) => left_node.find(directions),
+                        None => None,
+                    },
+                    Right => match right {
+                        Some(right_node) => right_node.find(directions),
+                        None => None,
+                    },
+                }
+            }
             Node::Leaf(c) => Some(*c),
         }
     }
