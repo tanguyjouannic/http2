@@ -1,16 +1,23 @@
 use crate::error::Http2Error;
 use crate::header::huffman::Tree;
 
-/// A HTTP/2 header list.
-pub struct HeaderList {
-    header_fields: Vec<HeaderField>,
+pub enum HeaderFieldRepresentation {
+    Indexed,
+    LiteralWithIncrementalIndexing,
+    LiteralWithoutIndexing,
+    LiteralNeverIndexed,
 }
 
-impl HeaderList {
-    /// Create a new HTTP/2 header list.
-    pub fn new() -> HeaderList {
-        HeaderList {
-            header_fields: Vec::new(),
+impl HeaderFieldRepresentation {
+    pub fn from_byte(byte: &u8) -> Result<HeaderFieldRepresentation, Http2Error> {
+        match byte {
+            0b1000_0000 => Ok(HeaderFieldRepresentation::Indexed),
+            0b0100_0000 => Ok(HeaderFieldRepresentation::LiteralWithIncrementalIndexing),
+            0b0000_0000 => Ok(HeaderFieldRepresentation::LiteralWithoutIndexing),
+            0b0000_0001 => Ok(HeaderFieldRepresentation::LiteralNeverIndexed),
+            _ => Err(Http2Error::HeaderError(
+                "Invalid Header Field Representation".to_string(),
+            )),
         }
     }
 }
@@ -79,7 +86,6 @@ pub struct HeaderValue {
     value: String,
 }
 
-
 impl HeaderValue {
     /// Create a new header field value.
     pub fn new(value: String) -> HeaderValue {
@@ -88,6 +94,7 @@ impl HeaderValue {
 }
 
 impl ToString for HeaderValue {
+    /// Convert the header field value to a String.
     fn to_string(&self) -> String {
         self.value.clone()
     }
@@ -133,6 +140,10 @@ impl DynamicTable {
     }
 
     /// Add a header field to the HPACK dynamic table.
+    ///
+    /// # Arguments
+    ///
+    /// * `entry` - The header field to add to the HPACK dynamic table.
     pub fn add_entry(&mut self, entry: HeaderField) {
         // Add the entry at the beginning of the dynamic table.
         self.entries.insert(0, entry);
@@ -431,9 +442,7 @@ impl HpackString {
 
         // Encode the string if Huffman encoding is required. TODO
         if huffman_encode {
-            return Err(Http2Error::NotImplementedError(
-                "Huffman encoding not implemented".to_string(),
-            ));
+
         }
 
         // Encode the length of the string.
@@ -497,7 +506,9 @@ impl HpackString {
             let tree: Tree = Tree::new().unwrap();
             Ok(HpackString::new(tree.decode(&mut string_octets)?))
         } else {
-            Ok(HpackString::new(String::from_utf8_lossy(&string_octets).into()))
+            Ok(HpackString::new(
+                String::from_utf8_lossy(&string_octets).into(),
+            ))
         }
     }
 }

@@ -4,9 +4,9 @@ use std::fmt;
 #[derive(Debug)]
 pub enum Http2Error {
     FrameError(String),
-    NotImplementedError(String),
     HpackError(String),
     HuffmanDecodingError(String),
+    HeaderError(String),
 }
 
 impl fmt::Display for Http2Error {
@@ -14,12 +14,12 @@ impl fmt::Display for Http2Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Http2Error::FrameError(message) => write!(f, "Frame Error: {}", message),
-            Http2Error::NotImplementedError(message) => {
-                write!(f, "Not Implemented Error: {}", message)
-            }
             Http2Error::HpackError(message) => write!(f, "Hpack Error: {}", message),
             Http2Error::HuffmanDecodingError(message) => {
                 write!(f, "Huffman Decoding Error: {}", message)
+            }
+            Http2Error::HeaderError(message) => {
+                write!(f, "Invalid Header Error: {}", message)
             }
         }
     }
