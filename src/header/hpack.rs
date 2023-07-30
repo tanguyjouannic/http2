@@ -1,15 +1,103 @@
 use crate::error::Http2Error;
-use crate::header::{HeaderField, HeaderName, HeaderValue};
 use crate::header::huffman::Tree;
-use core::fmt;
-use std::fmt::{Display, Formatter};
-use std::result;
 
-/// HPACK dynamic header fields table.
+/// A HTTP/2 header list.
+pub struct HeaderList {
+    header_fields: Vec<HeaderField>,
+}
+
+impl HeaderList {
+    /// Create a new HTTP/2 header list.
+    pub fn new() -> HeaderList {
+        HeaderList {
+            header_fields: Vec::new(),
+        }
+    }
+}
+
+/// A HTTP/2 header field.
+pub struct HeaderField {
+    name: HeaderName,
+    value: HeaderValue,
+}
+
+impl HeaderField {
+    /// Create a new HTTP/2 header field.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The name of the header field.
+    /// * `value` - The value of the header field.
+    pub fn new(name: HeaderName, value: HeaderValue) -> HeaderField {
+        HeaderField { name, value }
+    }
+
+    /// Get the name of the header field.
+    pub fn name(&self) -> String {
+        self.name.to_string()
+    }
+
+    /// Get the value of the header field.
+    pub fn value(&self) -> String {
+        self.value.to_string()
+    }
+
+    /// Calculate the size of the header field in octets.
+    ///
+    /// The size of an entry is the sum of its name's length in octets,
+    /// its value's length in octets, and 32.
+    pub fn size(&self) -> usize {
+        let name_size = self.name.to_string().as_bytes().len();
+        let value_size = self.value.to_string().as_bytes().len();
+
+        name_size + value_size + 32
+    }
+}
+
+/// A HTTP/2 header field name.
+pub struct HeaderName {
+    name: String,
+}
+
+impl HeaderName {
+    /// Create a new header field name.
+    pub fn new(name: String) -> HeaderName {
+        HeaderName {
+            name: name.to_lowercase(),
+        }
+    }
+}
+
+impl ToString for HeaderName {
+    fn to_string(&self) -> String {
+        self.name.clone()
+    }
+}
+
+/// A HTTP/2 header field value.
+pub struct HeaderValue {
+    value: String,
+}
+
+
+impl HeaderValue {
+    /// Create a new header field value.
+    pub fn new(value: String) -> HeaderValue {
+        HeaderValue { value }
+    }
+}
+
+impl ToString for HeaderValue {
+    fn to_string(&self) -> String {
+        self.value.clone()
+    }
+}
+
+/// HPACK dynamic table.
 pub struct DynamicTable {
-    table: Vec<HeaderField>,
-    max_size: usize,
+    entries: Vec<HeaderField>,
     size: usize,
+    max_size: usize,
 }
 
 impl DynamicTable {
@@ -20,14 +108,47 @@ impl DynamicTable {
     /// * `max_size` - The maximum size of the HPACK dynamic table.
     pub fn new(max_size: usize) -> DynamicTable {
         DynamicTable {
-            table: Vec::new(),
+            entries: Vec::new(),
             max_size,
             size: 0,
         }
     }
+
+    /// Get the size of the HPACK dynamic table.
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    /// Get the maximum size of the HPACK dynamic table.
+    pub fn max_size(&self) -> usize {
+        self.max_size
+    }
+
+    /// Update the size of the HPACK dynamic table.
+    pub fn update_size(&mut self) {
+        self.size = 0;
+        for entry in &self.entries {
+            self.size += entry.size();
+        }
+    }
+
+    /// Add a header field to the HPACK dynamic table.
+    pub fn add_entry(&mut self, entry: HeaderField) {
+        // Add the entry at the beginning of the dynamic table.
+        self.entries.insert(0, entry);
+
+        // Update the size of the dynamic table.
+        self.update_size();
+
+        // Evict entries if the size of the dynamic table is greater than the maximum size.
+        while self.size > self.max_size {
+            self.entries.pop();
+            self.update_size();
+        }
+    }
 }
 
-/// HPACK static header fields constants.
+/// HPACK static table constants.
 pub const STATIC_HEADER_FIELDS_TABLE_CONSTANTS: [(&str, &str); 61] = [
     (":authority", ""),
     (":method", "GET"),
