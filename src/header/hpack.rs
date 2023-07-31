@@ -2,27 +2,197 @@ use crate::error::Http2Error;
 use crate::header::huffman::Tree;
 
 pub enum HeaderFieldRepresentation {
-    Indexed,
-    LiteralWithIncrementalIndexing,
-    LiteralWithoutIndexing,
-    LiteralNeverIndexed,
+    // Indexed Header Field Representation
+    //
+    // An indexed header field representation identifies an entry in either
+    // the static table or the dynamic table.
+    //
+    // An indexed header field representation causes a header field to be
+    // added to the decoded header list.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 1 |        Index (7+)         |
+    // +---+---------------------------+
+    Indexed(HpackInteger),
+    // Literal Header Field with Incremental Indexing -- Indexed Name
+    //
+    // A literal header field with incremental indexing representation
+    // results in appending a header field to the decoded header list and
+    // inserting it as a new entry into the dynamic table.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 1 |      Index (6+)       |
+    // +---+---+-----------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    IncrementalIndexingIndexedName(HpackInteger, HpackString),
+    // Literal Header Field with Incremental Indexing -- New Name
+    //
+    // A literal header field with incremental indexing representation
+    // results in appending a header field to the decoded header list and
+    // inserting it as a new entry into the dynamic table.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 1 |           0           |
+    // +---+---+-----------------------+
+    // | H |     Name Length (7+)      |
+    // +---+---------------------------+
+    // |  Name String (Length octets)  |
+    // +---+---------------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    IncrementalIndexingNewName(HpackString, HpackString),
+    // Literal Header Field without Indexing -- Indexed Name
+    //
+    // A literal header field without indexing representation results in
+    // appending a header field to the decoded header list without altering
+    // the dynamic table.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 0 | 0 | 0 |  Index (4+)   |
+    // +---+---+-----------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    WithoutIndexingIndexedName(HpackInteger, HpackString),
+    // Literal Header Field without Indexing -- New Name
+    //
+    // A literal header field without indexing representation results in
+    // appending a header field to the decoded header list without altering
+    // the dynamic table.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 0 | 0 | 0 |       0       |
+    // +---+---+-----------------------+
+    // | H |     Name Length (7+)      |
+    // +---+---------------------------+
+    // |  Name String (Length octets)  |
+    // +---+---------------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    WithoutIndexingNewName(HpackString, HpackString),
+    // Literal Header Field Never Indexed -- Indexed Name
+    //
+    // A literal header field never-indexed representation results in
+    // appending a header field to the decoded header list without altering
+    // the dynamic table.  Intermediaries MUST use the same representation
+    // for encoding this header field.
+    //
+    //     0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 0 | 0 | 1 |  Index (4+)   |
+    // +---+---+-----------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    NeverIndexedIndexedName(HpackInteger, HpackString),
+    // Literal Header Field Never Indexed -- New Name
+    //
+    // A literal header field never-indexed representation results in
+    // appending a header field to the decoded header list without altering
+    // the dynamic table.  Intermediaries MUST use the same representation
+    // for encoding this header field.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 0 | 0 | 1 |       0       |
+    // +---+---+-----------------------+
+    // | H |     Name Length (7+)      |
+    // +---+---------------------------+
+    // |  Name String (Length octets)  |
+    // +---+---------------------------+
+    // | H |     Value Length (7+)     |
+    // +---+---------------------------+
+    // | Value String (Length octets)  |
+    // +-------------------------------+
+    NeverIndexedNewName(HpackString, HpackString),
+    // Dynamic Table Size Update
+    //
+    // A dynamic table size update signals a change to the size of the
+    // dynamic table.
+    //
+    //   0   1   2   3   4   5   6   7
+    // +---+---+---+---+---+---+---+---+
+    // | 0 | 0 | 1 |   Max size (5+)   |
+    // +---+---------------------------+
+    SizeUpdate(HpackInteger),
 }
 
 impl HeaderFieldRepresentation {
-    pub fn from_byte(byte: &u8) -> Result<HeaderFieldRepresentation, Http2Error> {
-        match byte {
-            0b1000_0000 => Ok(HeaderFieldRepresentation::Indexed),
-            0b0100_0000 => Ok(HeaderFieldRepresentation::LiteralWithIncrementalIndexing),
-            0b0000_0000 => Ok(HeaderFieldRepresentation::LiteralWithoutIndexing),
-            0b0000_0001 => Ok(HeaderFieldRepresentation::LiteralNeverIndexed),
-            _ => Err(Http2Error::HeaderError(
-                "Invalid Header Field Representation".to_string(),
-            )),
+    pub fn decode(bytes: &mut Vec<u8>) -> Result<HeaderFieldRepresentation, Http2Error> {
+        // Check if it is Indexed Header Field Representation.
+        if bytes[0] & 0b1000_0000 == 0b1000_0000 {
+            let index = HpackInteger::decode(7, bytes)?;
+            return Ok(HeaderFieldRepresentation::Indexed(index));
         }
+
+        // Check if it is Literal Header Field with Incremental Indexing.
+        if bytes[0] & 0b1100_0000 == 0b0100_0000 {
+            // Check if it is Literal Header Field with Incremental Indexing -- Indexed Name.
+            if bytes[0] & 0b0011_1111 != 0 {
+                let index = HpackInteger::decode(6, bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value));
+            } else {
+                let name = HpackString::decode(bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::IncrementalIndexingNewName(name, value));
+            }
+        }
+
+        // Check if it is Literal Header Field without Indexing.
+        if bytes[0] & 0b1111_0000 == 0b0000_0000 {
+            // Check if it is Literal Header Field without Indexing -- Indexed Name.
+            if bytes[0] & 0b0000_1111 != 0 {
+                let index = HpackInteger::decode(4, bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value));
+            } else {
+                let name = HpackString::decode(bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::WithoutIndexingNewName(name, value));
+            }
+        }
+
+        // Check if it is Literal Header Field Never Indexed.
+        if bytes[0] & 0b1111_0000 == 0b0001_0000 {
+            // Check if it is Literal Header Field Never Indexed -- Indexed Name.
+            if bytes[0] & 0b0000_1111 != 0 {
+                let index = HpackInteger::decode(4, bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::NeverIndexedIndexedName(index, value));
+            } else {
+                let name = HpackString::decode(bytes)?;
+                let value = HpackString::decode(bytes)?;
+                return Ok(HeaderFieldRepresentation::NeverIndexedNewName(name, value));
+            }
+        }
+
+        // Check if it is Dynamic Table Size Update.
+        if bytes[0] & 0b1110_0000 == 0b0010_0000 {
+            let max_size = HpackInteger::decode(5, bytes)?;
+            return Ok(HeaderFieldRepresentation::SizeUpdate(max_size));
+        }
+
+        Err(Http2Error::HpackError("Invalid header field representation".to_string()))
     }
 }
 
 /// A HTTP/2 header field.
+#[derive(Clone)]
 pub struct HeaderField {
     name: HeaderName,
     value: HeaderValue,
@@ -59,9 +229,99 @@ impl HeaderField {
 
         name_size + value_size + 32
     }
+
+    pub fn from_representation(
+        representation: HeaderFieldRepresentation,
+        header_table: &mut HeaderTable,
+    ) -> Result<HeaderField, Http2Error> {
+        match representation {
+            HeaderFieldRepresentation::Indexed(index) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                header_table.get(index)
+            },
+            HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::IncrementalIndexingNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::WithoutIndexingNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::NeverIndexedIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::NeverIndexedNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::SizeUpdate(max_size) => {
+                header_table.set_max_size(max_size.value() as usize);
+
+                Err(Http2Error::HpackError(
+                    "Dynamic Table Size Update is not a header field".to_string(),
+                ))
+            }
+        }
+    }
 }
 
 /// A HTTP/2 header field name.
+#[derive(Clone)]
 pub struct HeaderName {
     name: String,
 }
@@ -82,6 +342,7 @@ impl ToString for HeaderName {
 }
 
 /// A HTTP/2 header field value.
+#[derive(Clone)]
 pub struct HeaderValue {
     value: String,
 }
@@ -97,6 +358,68 @@ impl ToString for HeaderValue {
     /// Convert the header field value to a String.
     fn to_string(&self) -> String {
         self.value.clone()
+    }
+}
+
+/// HPACK header table.
+/// 
+/// The header table contains the union of the static and dynamic tables.
+/// 
+/// <----------  Index Address Space ---------->
+/// <-- Static  Table -->  <-- Dynamic Table -->
+/// +---+-----------+---+  +---+-----------+---+
+/// | 1 |    ...    | s |  |s+1|    ...    |s+k|
+/// +---+-----------+---+  +---+-----------+---+
+///                        ^                   |
+///                        |                   V
+///                 Insertion Point      Dropping Point
+pub struct HeaderTable {
+    static_table: StaticTable,
+    dynamic_table: DynamicTable,
+}
+
+impl HeaderTable  {
+    /// Create a new HPACK header table.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `dynamic_table_max_size` - The maximum size of the HPACK dynamic table.
+    pub fn new(dynamic_table_max_size: usize) -> HeaderTable {
+        HeaderTable {
+            static_table: StaticTable::new(),
+            dynamic_table: DynamicTable::new(dynamic_table_max_size),
+        }
+    }
+
+    /// Get a header field from the HPACK header table.
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the header field to get.
+    pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
+        if index <= self.static_table.len() {
+            self.static_table.get(index - 1)
+        } else {
+            self.dynamic_table.get(index - self.static_table.len())
+        }
+    }
+
+    /// Insert a header field into the HPACK header table.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `header_field` - The header field to insert.
+    pub fn add_entry(&mut self, header_field: HeaderField) {
+        self.dynamic_table.add_entry(header_field);
+    }
+
+    /// Set the maximum size of the HPACK dynamic table.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `max_size` - The maximum size of the HPACK dynamic table.
+    pub fn set_max_size(&mut self, max_size: usize) {
+        self.dynamic_table.set_max_size(max_size);
     }
 }
 
@@ -121,6 +444,11 @@ impl DynamicTable {
         }
     }
 
+    /// Get the number of entries in the HPACK dynamic table.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
     /// Get the size of the HPACK dynamic table.
     pub fn size(&self) -> usize {
         self.size
@@ -129,6 +457,21 @@ impl DynamicTable {
     /// Get the maximum size of the HPACK dynamic table.
     pub fn max_size(&self) -> usize {
         self.max_size
+    }
+
+    /// Get a header field from the HPACK dynamic table.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the header field to get.
+    pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
+        match self.entries.get(index) {
+            Some(header_field) => Ok(header_field.clone()),
+            None => Err(Http2Error::IndexationError(format!(
+                "Index {} is out of bounds.",
+                index
+            ))),
+        }
     }
 
     /// Update the size of the HPACK dynamic table.
@@ -150,6 +493,22 @@ impl DynamicTable {
 
         // Update the size of the dynamic table.
         self.update_size();
+
+        // Evict entries if the size of the dynamic table is greater than the maximum size.
+        while self.size > self.max_size {
+            self.entries.pop();
+            self.update_size();
+        }
+    }
+
+    /// Set the maximum size of the HPACK dynamic table.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `max_size` - The maximum size of the HPACK dynamic table.
+    pub fn set_max_size(&mut self, max_size: usize) {
+        // Set the new maximum size of the dynamic table.
+        self.max_size = max_size;
 
         // Evict entries if the size of the dynamic table is greater than the maximum size.
         while self.size > self.max_size {
@@ -242,6 +601,26 @@ impl StaticTable {
         }
 
         StaticTable { table }
+    }
+
+    /// Get a header field from the static table.
+    ///
+    /// # Arguments
+    /// 
+    /// * `index` - The index of the header field to get.
+    pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
+        match self.table.get(index) {
+            Some(header_field) => Ok(header_field.clone()),
+            None => Err(Http2Error::IndexationError(format!(
+                "Index {} is out of bounds.",
+                index
+            ))),
+        }
+    }
+
+    /// Get the number of header fields of static table.
+    pub fn len(&self) -> usize {
+        self.table.len()
     }
 }
 

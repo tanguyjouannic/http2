@@ -7,6 +7,7 @@ pub enum Http2Error {
     HpackError(String),
     HuffmanDecodingError(String),
     HeaderError(String),
+    IndexationError(String),
 }
 
 impl fmt::Display for Http2Error {
@@ -20,6 +21,9 @@ impl fmt::Display for Http2Error {
             }
             Http2Error::HeaderError(message) => {
                 write!(f, "Invalid Header Error: {}", message)
+            }
+            Http2Error::IndexationError(message) => {
+                write!(f, "Indexation Error: {}", message)
             }
         }
     }
