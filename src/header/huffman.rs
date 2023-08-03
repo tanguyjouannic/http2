@@ -42,8 +42,7 @@ impl Node {
                     Node::Branch(_, right) => {
                         right.get_or_insert(Box::new(Node::Branch(None, None)))
                     }
-                    Node::Leaf(s) => {
-                        println!("symbol: {}", s);
+                    Node::Leaf(_) => {
                         return Err(Http2Error::HuffmanDecodingError(
                             "Huffman Tree building error".to_string(),
                         ));
@@ -169,7 +168,6 @@ impl Tree {
     pub fn decode(&self, bytes: &mut Vec<u8>) -> Result<String, Http2Error> {
         let mut decoded: Vec<char> = Vec::new();
         let mut directions = Direction::from_bytes(bytes);
-        println!("directions: {:?}", directions);
 
         while !directions.is_empty() {
             match self.root.find(&mut directions) {

@@ -1,5 +1,4 @@
 use http2::header::hpack::HpackString;
-use http2::header::huffman::Tree;
 
 #[test]
 pub fn test_huffman() {
@@ -25,27 +24,10 @@ pub fn test_huffman() {
     assert_eq!(custom_header.to_string(), "custom-header".to_string());
 
     let mut encoded_data: Vec<u8> = vec![
-        0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05, 0x95, 0x04, 0x0b, 0x81,
-        0x66, 0xe0, 0x82, 0xa6, 0x2d, 0x1b, 0xff,
-    ];
-
-    let tree = Tree::new().unwrap();
-
-    let decoded_data = tree.decode(&mut encoded_data).unwrap();
-
-    println!("decoded_data: {:?}", decoded_data);
-
-    // let mut encoded_data: Vec<u8> = vec![
-    //     0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff,
-    // ];
-
-    // let decoded_data = tree.decode(&mut encoded_data).unwrap();
-
-    let mut encoded_data: Vec<u8> = vec![
         0x96, 0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05, 0x95, 0x04, 0x0b,
         0x81, 0x66, 0xe0, 0x82, 0xa6, 0x2d, 0x1b, 0xff,
     ];
 
     let s = HpackString::decode(&mut encoded_data).unwrap();
-    println!("s: {}", s.to_string());
+    assert_eq!(s.to_string(), "Mon, 21 Oct 2013 20:13:21 GMT".to_string());
 }
