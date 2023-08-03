@@ -21,9 +21,9 @@ impl HeaderList {
     }
 
     /// Decode a header list from a byte vector and a header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `bytes` - The byte vector to decode.
     /// * `header_table` - The header table to use.
     pub fn decode(bytes: &mut Vec<u8>, header_table: &mut HeaderTable) -> Result<Self, Http2Error> {
@@ -91,9 +91,9 @@ impl HeaderField {
     }
 
     /// Decode a header field from a byte vector and a header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `bytes` - The byte vector.
     /// * `header_table` - The header table.
     pub fn decode(bytes: &mut Vec<u8>, header_table: &mut HeaderTable) -> Result<Self, Http2Error> {
@@ -106,9 +106,9 @@ impl HeaderField {
 
     /// Build a header field from a header field representation and
     /// a header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `representation` - The header field representation.
     /// * `header_table` - The header table.
     pub fn from_representation(
@@ -123,7 +123,7 @@ impl HeaderField {
                 };
 
                 header_table.get(index)
-            },
+            }
             HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value) => {
                 let index: usize = match index.value().try_into() {
                     Ok(index) => index,
@@ -411,12 +411,16 @@ impl HeaderFieldRepresentation {
             if bytes[0] & 0b0011_1111 != 0 {
                 let index = HpackInteger::decode(6, bytes)?;
                 let value = HpackString::decode(bytes)?;
-                return Ok(HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value));
+                return Ok(HeaderFieldRepresentation::IncrementalIndexingIndexedName(
+                    index, value,
+                ));
             } else {
                 *bytes = bytes[1..].to_vec();
                 let name = HpackString::decode(bytes)?;
                 let value = HpackString::decode(bytes)?;
-                return Ok(HeaderFieldRepresentation::IncrementalIndexingNewName(name, value));
+                return Ok(HeaderFieldRepresentation::IncrementalIndexingNewName(
+                    name, value,
+                ));
             }
         }
 
@@ -426,12 +430,16 @@ impl HeaderFieldRepresentation {
             if bytes[0] & 0b0000_1111 != 0 {
                 let index = HpackInteger::decode(4, bytes)?;
                 let value = HpackString::decode(bytes)?;
-                return Ok(HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value));
+                return Ok(HeaderFieldRepresentation::WithoutIndexingIndexedName(
+                    index, value,
+                ));
             } else {
                 *bytes = bytes[1..].to_vec();
                 let name = HpackString::decode(bytes)?;
                 let value = HpackString::decode(bytes)?;
-                return Ok(HeaderFieldRepresentation::WithoutIndexingNewName(name, value));
+                return Ok(HeaderFieldRepresentation::WithoutIndexingNewName(
+                    name, value,
+                ));
             }
         }
 
@@ -441,7 +449,9 @@ impl HeaderFieldRepresentation {
             if bytes[0] & 0b0000_1111 != 0 {
                 let index = HpackInteger::decode(4, bytes)?;
                 let value = HpackString::decode(bytes)?;
-                return Ok(HeaderFieldRepresentation::NeverIndexedIndexedName(index, value));
+                return Ok(HeaderFieldRepresentation::NeverIndexedIndexedName(
+                    index, value,
+                ));
             } else {
                 *bytes = bytes[1..].to_vec();
                 let name = HpackString::decode(bytes)?;
@@ -456,14 +466,16 @@ impl HeaderFieldRepresentation {
             return Ok(HeaderFieldRepresentation::SizeUpdate(max_size));
         }
 
-        Err(Http2Error::HpackError("Invalid header field representation".to_string()))
+        Err(Http2Error::HpackError(
+            "Invalid header field representation".to_string(),
+        ))
     }
 }
 
 /// HPACK header table.
-/// 
+///
 /// The header table contains the union of the static and dynamic tables.
-/// 
+///
 /// <----------  Index Address Space ---------->
 /// <-- Static  Table -->  <-- Dynamic Table -->
 /// +---+-----------+---+  +---+-----------+---+
@@ -477,11 +489,11 @@ pub struct HeaderTable {
     dynamic_table: DynamicTable,
 }
 
-impl HeaderTable  {
+impl HeaderTable {
     /// Create a new HPACK header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `dynamic_table_max_size` - The maximum size of the HPACK dynamic table.
     pub fn new(dynamic_table_max_size: usize) -> HeaderTable {
         HeaderTable {
@@ -493,7 +505,7 @@ impl HeaderTable  {
     /// Get a header field from the HPACK header table.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the header field to get.
     pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
         if index <= self.static_table.len() {
@@ -504,18 +516,18 @@ impl HeaderTable  {
     }
 
     /// Insert a header field into the HPACK header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to insert.
     pub fn add_entry(&mut self, header_field: HeaderField) {
         self.dynamic_table.add_entry(header_field);
     }
 
     /// Set the maximum size of the HPACK dynamic table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `max_size` - The maximum size of the HPACK dynamic table.
     pub fn set_max_size(&mut self, max_size: usize) {
         self.dynamic_table.set_max_size(max_size);
@@ -525,7 +537,6 @@ impl HeaderTable  {
     pub fn get_dynamic_table_size(&self) -> usize {
         self.dynamic_table.size()
     }
-
 }
 
 /// HPACK dynamic table.
@@ -565,9 +576,9 @@ impl DynamicTable {
     }
 
     /// Get a header field from the HPACK dynamic table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the header field to get.
     pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
         match self.entries.get(index) {
@@ -607,9 +618,9 @@ impl DynamicTable {
     }
 
     /// Set the maximum size of the HPACK dynamic table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `max_size` - The maximum size of the HPACK dynamic table.
     pub fn set_max_size(&mut self, max_size: usize) {
         // Set the new maximum size of the dynamic table.
@@ -711,7 +722,7 @@ impl StaticTable {
     /// Get a header field from the static table.
     ///
     /// # Arguments
-    /// 
+    ///
     /// * `index` - The index of the header field to get.
     pub fn get(&self, index: usize) -> Result<HeaderField, Http2Error> {
         match self.table.get(index) {
@@ -925,9 +936,7 @@ impl HpackString {
         let string_octets = self.s.as_bytes();
 
         // Encode the string if Huffman encoding is required. TODO
-        if huffman_encode {
-
-        }
+        if huffman_encode {}
 
         // Encode the length of the string.
         let length = HpackInteger::new(string_octets.len() as u128);
