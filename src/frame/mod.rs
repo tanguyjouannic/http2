@@ -14,16 +14,17 @@ use crate::error::Http2Error;
 ///  +=+=============================================================+
 ///  |                   Frame Payload (0...)                      ...
 ///  +---------------------------------------------------------------+
-pub struct FrameHeader {
+pub struct Frame {
     length: u32,
     frame_type: FrameType,
     flags: u8,
     reserved: u8,
     stream_identifier: u32,
+    payload: Vec<u8>,
 }
 
-impl FrameHeader {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Http2Error> {
+impl Frame {
+    pub fn from_bytes(bytes: &mut Vec<u8>) -> Result<Self, Http2Error> {
         // Check that the length of the bytes is 9.
         if bytes.len() != 9 {
             return Err(Http2Error::FrameError(
@@ -37,13 +38,23 @@ impl FrameHeader {
         let flags = bytes[4];
         let reserved = bytes[5] >> 7;
         let stream_identifier = u32::from_be_bytes([bytes[5] & 0x7F, bytes[6], bytes[7], bytes[8]]);
+        
+        // Gather the payload with the length
+        let mut payload = Vec::new();
+        for i in 0..length {
+            payload.push(bytes[9 + i as usize]);
+        }
 
-        Ok(FrameHeader {
+        // Remove the frame from the bytes.
+        *bytes = bytes.split_off(9 + length as usize);
+
+        Ok(Frame {
             length,
             frame_type,
             flags,
             reserved,
             stream_identifier,
+            payload,
         })
     }
 }
