@@ -51,7 +51,7 @@ impl TryFrom<&mut Vec<u8>> for Frame {
         let flags_byte = bytes[4];
         let _reserved = bytes[5] >> 7;
         let stream = u32::from_be_bytes([bytes[5] & 0x7F, bytes[6], bytes[7], bytes[8]]);
-        
+
         // Check that the stream is long enough to get contain the frame.
         if bytes.len() < 9 + length as usize {
             return Err(Http2Error::FrameError(
@@ -60,10 +60,12 @@ impl TryFrom<&mut Vec<u8>> for Frame {
         }
 
         let frame = match frame_type {
-            0x0 => Frame::Data(Data::deserialize(bytes[9..9 + length as usize].to_vec(), flags_byte, stream)),
-            _ => return Err(Http2Error::FrameError(
-                "Invalid frame type".to_string(),
+            0x0 => Frame::Data(Data::deserialize(
+                bytes[9..9 + length as usize].to_vec(),
+                flags_byte,
+                stream,
             )),
+            _ => return Err(Http2Error::FrameError("Invalid frame type".to_string())),
         };
 
         // Remove the frame from the bytes.
@@ -116,9 +118,9 @@ pub struct Data {
 
 impl Data {
     /// Deserialize the flags byte.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `byte` - The flags byte.
     fn deserialize_flags(byte: u8) -> Vec<Flags> {
         let mut flags = Vec::new();
@@ -135,9 +137,9 @@ impl Data {
     }
 
     /// Deserialize a DATA frame.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `frame_payload` - The frame payload.
     /// * `flags_byte` - The flags byte.
     /// * `stream` - The stream identifier.
@@ -146,8 +148,9 @@ impl Data {
 
         if flags.contains(&Flags::Padded) {
             let padding_length = frame_payload[0];
-            let payload = frame_payload[1..frame_payload.len() - padding_length as usize + 1].to_vec();
-            
+            let payload =
+                frame_payload[1..frame_payload.len() - padding_length as usize + 1].to_vec();
+
             Data {
                 payload,
                 stream,
@@ -190,7 +193,6 @@ pub struct WindowUpdate {}
 
 pub struct Continuation {}
 
-
 // pub struct Frame {
 //     length: u32,
 //     frame_type: FrameType,
@@ -215,7 +217,7 @@ pub struct Continuation {}
 //         let flags = bytes[4];
 //         let reserved = bytes[5] >> 7;
 //         let stream_identifier = u32::from_be_bytes([bytes[5] & 0x7F, bytes[6], bytes[7], bytes[8]]);
-        
+
 //         // Gather the payload with the length
 //         let mut payload = Vec::new();
 //         for i in 0..length {

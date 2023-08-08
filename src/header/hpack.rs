@@ -15,11 +15,6 @@ impl HeaderList {
         HeaderList { header_fields }
     }
 
-    /// Get the header fields of the header list.
-    pub fn header_fields(&self) -> &Vec<HeaderField> {
-        &self.header_fields
-    }
-
     /// Decode a header list from a byte vector and a header table.
     ///
     /// # Arguments
@@ -37,6 +32,26 @@ impl HeaderList {
         }
 
         Ok(header_list)
+    }
+
+    /// Encode the header list into a byte vector updating a header table.
+    ///
+    /// # Arguments
+    ///
+    /// * `header_table` - The header table to update.
+    pub fn encode_unoptimized(
+        &self,
+        header_table: &mut HeaderTable,
+    ) -> Vec<u8> {
+        let mut bytes = Vec::new();
+
+        // Encode each header field.
+        for header_field in &self.header_fields {
+            let mut header_field_bytes = header_field.encode(header_table);
+            bytes.append(&mut header_field_bytes);
+        }
+
+        bytes
     }
 }
 
@@ -101,109 +116,22 @@ impl HeaderField {
         let representation = HeaderFieldRepresentation::decode(bytes)?;
 
         // Build the header field from the header field representation.
-        Self::from_representation(representation, header_table)
+        representation.into_header_field(header_table)
     }
+    
+    /// Encode a header field into a byte vector updating a header table.
+    pub fn encode(&self, header_table: &mut HeaderTable) -> Vec<u8> {
+        let mut bytes = Vec::new();
 
-    /// Build a header field from a header field representation and
-    /// a header table.
-    ///
-    /// # Arguments
-    ///
-    /// * `representation` - The header field representation.
-    /// * `header_table` - The header table.
-    pub fn from_representation(
-        representation: HeaderFieldRepresentation,
-        header_table: &mut HeaderTable,
-    ) -> Result<Self, Http2Error> {
-        match representation {
-            HeaderFieldRepresentation::Indexed(index) => {
-                let index: usize = match index.value().try_into() {
-                    Ok(index) => index,
-                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
-                };
+        // Encode the header field representation.
+        let representation = HeaderFieldRepresentation::IncrementalIndexingNewName(
+            HpackString::new(self.name.to_string()),
+            HpackString::new(self.value.to_string()),
+        );
 
-                header_table.get(index)
-            }
-            HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value) => {
-                let index: usize = match index.value().try_into() {
-                    Ok(index) => index,
-                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
-                };
+        bytes.append(&mut representation.encode(false, header_table));
 
-                let indexed_name = match header_table.get(index) {
-                    Ok(indexed_name) => indexed_name.name(),
-                    Err(error) => return Err(error),
-                };
-
-                let name = HeaderName::new(indexed_name);
-                let value = HeaderValue::new(value.to_string());
-
-                let header_field = HeaderField::new(name, value);
-                header_table.add_entry(header_field.clone());
-
-                Ok(header_field)
-            }
-            HeaderFieldRepresentation::IncrementalIndexingNewName(name, value) => {
-                let name = HeaderName::new(name.to_string());
-                let value = HeaderValue::new(value.to_string());
-
-                let header_field = HeaderField::new(name, value);
-                header_table.add_entry(header_field.clone());
-
-                Ok(header_field)
-            }
-            HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value) => {
-                let index: usize = match index.value().try_into() {
-                    Ok(index) => index,
-                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
-                };
-
-                let indexed_name = match header_table.get(index) {
-                    Ok(indexed_name) => indexed_name.name(),
-                    Err(error) => return Err(error),
-                };
-
-                let name = HeaderName::new(indexed_name);
-                let value = HeaderValue::new(value.to_string());
-
-                Ok(HeaderField::new(name, value))
-            }
-            HeaderFieldRepresentation::WithoutIndexingNewName(name, value) => {
-                let name = HeaderName::new(name.to_string());
-                let value = HeaderValue::new(value.to_string());
-
-                Ok(HeaderField::new(name, value))
-            }
-            HeaderFieldRepresentation::NeverIndexedIndexedName(index, value) => {
-                let index: usize = match index.value().try_into() {
-                    Ok(index) => index,
-                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
-                };
-
-                let indexed_name = match header_table.get(index) {
-                    Ok(indexed_name) => indexed_name.name(),
-                    Err(error) => return Err(error),
-                };
-
-                let name = HeaderName::new(indexed_name);
-                let value = HeaderValue::new(value.to_string());
-
-                Ok(HeaderField::new(name, value))
-            }
-            HeaderFieldRepresentation::NeverIndexedNewName(name, value) => {
-                let name = HeaderName::new(name.to_string());
-                let value = HeaderValue::new(value.to_string());
-
-                Ok(HeaderField::new(name, value))
-            }
-            HeaderFieldRepresentation::SizeUpdate(max_size) => {
-                header_table.set_max_size(max_size.value() as usize);
-
-                Err(Http2Error::HpackError(
-                    "Dynamic Table Size Update is not a header field".to_string(),
-                ))
-            }
-        }
+        bytes
     }
 }
 
@@ -469,6 +397,153 @@ impl HeaderFieldRepresentation {
         Err(Http2Error::HpackError(
             "Invalid header field representation".to_string(),
         ))
+    }
+
+    /// Encodes the header field representation into a byte vector.
+    pub fn encode(&self, huffman_encode: bool, header_table: &mut HeaderTable) -> Vec<u8> {
+        match self {
+            HeaderFieldRepresentation::Indexed(index) => {
+                let mut bytes = index.encode(7).unwrap();
+                bytes[0] |= 0b1000_0000;
+                bytes
+            }
+            HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value) => {
+                let mut bytes = index.encode(6).unwrap();
+                bytes[0] |= 0b0100_0000;
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::IncrementalIndexingNewName(name, value) => {
+                let mut bytes: Vec<u8> = Vec::new();
+                bytes.push(0b0100_0000);
+                bytes.append(&mut name.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value) => {
+                let mut bytes = index.encode(4).unwrap();
+                bytes[0] |= 0b0000_0000;
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::WithoutIndexingNewName(name, value) => {
+                let mut bytes: Vec<u8> = Vec::new();
+                bytes.push(0b0000_0000);
+                bytes.append(&mut name.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::NeverIndexedIndexedName(index, value) => {
+                let mut bytes = index.encode(4).unwrap();
+                bytes[0] |= 0b0001_0000;
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::NeverIndexedNewName(name, value) => {
+                let mut bytes: Vec<u8> = Vec::new();
+                bytes.push(0b0001_0000);
+                bytes.append(&mut name.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes
+            }
+            HeaderFieldRepresentation::SizeUpdate(max_size) => {
+                let mut bytes = max_size.encode(5).unwrap();
+                bytes[0] |= 0b0010_0000;
+                bytes
+            }
+        }
+    }
+
+    pub fn into_header_field(&self, header_table: &mut HeaderTable) -> Result<HeaderField, Http2Error> {
+        match self {
+            HeaderFieldRepresentation::Indexed(index) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                header_table.get(index)
+            }
+            HeaderFieldRepresentation::IncrementalIndexingIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                let header_field = HeaderField::new(name, value);
+                header_table.add_entry(header_field.clone());
+
+                Ok(header_field)
+            }
+            HeaderFieldRepresentation::IncrementalIndexingNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                let header_field = HeaderField::new(name, value);
+                header_table.add_entry(header_field.clone());
+
+                Ok(header_field)
+            }
+            HeaderFieldRepresentation::WithoutIndexingIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::WithoutIndexingNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::NeverIndexedIndexedName(index, value) => {
+                let index: usize = match index.value().try_into() {
+                    Ok(index) => index,
+                    Err(_) => return Err(Http2Error::HpackError("Invalid index".to_string())),
+                };
+
+                let indexed_name = match header_table.get(index) {
+                    Ok(indexed_name) => indexed_name.name(),
+                    Err(error) => return Err(error),
+                };
+
+                let name = HeaderName::new(indexed_name);
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::NeverIndexedNewName(name, value) => {
+                let name = HeaderName::new(name.to_string());
+                let value = HeaderValue::new(value.to_string());
+
+                Ok(HeaderField::new(name, value))
+            }
+            HeaderFieldRepresentation::SizeUpdate(max_size) => {
+                header_table.set_max_size(max_size.value() as usize);
+
+                Err(Http2Error::HpackError(
+                    "Dynamic Table Size Update is not a header field".to_string(),
+                ))
+            }
+        }
     }
 }
 

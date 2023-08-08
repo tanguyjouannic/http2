@@ -1,4 +1,6 @@
-use http2::header::hpack::{HeaderField, HeaderList, HeaderTable, HpackInteger};
+use http2::header::hpack::{
+    HeaderField, HeaderList, HeaderName, HeaderTable, HeaderValue, HpackInteger,
+};
 
 #[test]
 pub fn test_hpack_integer() {
@@ -100,12 +102,21 @@ pub fn test_hpack_header_field() {
     //
     // Decoded header list:
     // custom-key: custom-header
+    let mut header_table_sender = HeaderTable::new(4096);
+
+    let header_name = HeaderName::new("custom-key".to_string());
+    let header_value = HeaderValue::new("custom-header".to_string());
+
+    let header_field = HeaderField::new(header_name, header_value);
+
+    let mut header_field_encoded = header_field.encode(&mut header_table_sender);
+
     let mut header_table = HeaderTable::new(4096);
 
-    let mut header_field_encoded: Vec<u8> = vec![
-        0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0d, 0x63, 0x75,
-        0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72,
-    ];
+    // let mut header_field_encoded: Vec<u8> = vec![
+    //     0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0d, 0x63, 0x75,
+    //     0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72,
+    // ];
 
     let header_field = HeaderField::decode(&mut header_field_encoded, &mut header_table).unwrap();
 
@@ -926,19 +937,13 @@ pub fn test_hpack_header_list_huffman_eviction() {
         0x82, 0xa6, 0x2d, 0x1b, 0xff, 0x6e, 0x91, 0x9d, 0x29, 0xad, 0x17, 0x18, 0x63, 0xc7, 0x8f,
         0x0b, 0x97, 0xc8, 0xe9, 0xae, 0x82, 0xae, 0x43, 0xd3,
     ];
-    
+
     let header_list = HeaderList::decode(&mut header_list_encoded, &mut header_table).unwrap();
 
     let hf1 = HeaderField::new(":status".into(), "302".into());
     let hf2 = HeaderField::new("cache-control".into(), "private".into());
-    let hf3 = HeaderField::new(
-        "date".into(),
-        "Mon, 21 Oct 2013 20:13:21 GMT".into(),
-    );
-    let hf4 = HeaderField::new(
-        "location".into(),
-        "https://www.example.com".into(),
-    );
+    let hf3 = HeaderField::new("date".into(), "Mon, 21 Oct 2013 20:13:21 GMT".into());
+    let hf4 = HeaderField::new("location".into(), "https://www.example.com".into());
     let expected_header_list = HeaderList::new(vec![hf1, hf2, hf3, hf4]);
 
     assert_eq!(header_list, expected_header_list);
@@ -998,14 +1003,8 @@ pub fn test_hpack_header_list_huffman_eviction() {
 
     let hf1 = HeaderField::new(":status".into(), "307".into());
     let hf2 = HeaderField::new("cache-control".into(), "private".into());
-    let hf3 = HeaderField::new(
-        "date".into(),
-        "Mon, 21 Oct 2013 20:13:21 GMT".into(),
-    );
-    let hf4 = HeaderField::new(
-        "location".into(),
-        "https://www.example.com".into(),
-    );
+    let hf3 = HeaderField::new("date".into(), "Mon, 21 Oct 2013 20:13:21 GMT".into());
+    let hf4 = HeaderField::new("location".into(), "https://www.example.com".into());
     let expected_header_list = HeaderList::new(vec![hf1, hf2, hf3, hf4]);
 
     assert_eq!(header_list, expected_header_list);
@@ -1100,11 +1099,12 @@ pub fn test_hpack_header_list_huffman_eviction() {
     // content-encoding: gzip
     // set-cookie: foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1
     let mut header_list_encoded: Vec<u8> = vec![
-        0x88, 0xc1, 0x61, 0x96, 0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05, 0x95,
-        0x04, 0x0b, 0x81, 0x66, 0xe0, 0x84, 0xa6, 0x2d, 0x1b, 0xff, 0xc0, 0x5a, 0x83, 0x9b, 0xd9, 0xab,
-        0x77, 0xad, 0x94, 0xe7, 0x82, 0x1d, 0xd7, 0xf2, 0xe6, 0xc7, 0xb3, 0x35, 0xdf, 0xdf, 0xcd, 0x5b,
-        0x39, 0x60, 0xd5, 0xaf, 0x27, 0x08, 0x7f, 0x36, 0x72, 0xc1, 0xab, 0x27, 0x0f, 0xb5, 0x29, 0x1f,
-        0x95, 0x87, 0x31, 0x60, 0x65, 0xc0, 0x03, 0xed, 0x4e, 0xe5, 0xb1, 0x06, 0x3d, 0x50, 0x07
+        0x88, 0xc1, 0x61, 0x96, 0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05,
+        0x95, 0x04, 0x0b, 0x81, 0x66, 0xe0, 0x84, 0xa6, 0x2d, 0x1b, 0xff, 0xc0, 0x5a, 0x83, 0x9b,
+        0xd9, 0xab, 0x77, 0xad, 0x94, 0xe7, 0x82, 0x1d, 0xd7, 0xf2, 0xe6, 0xc7, 0xb3, 0x35, 0xdf,
+        0xdf, 0xcd, 0x5b, 0x39, 0x60, 0xd5, 0xaf, 0x27, 0x08, 0x7f, 0x36, 0x72, 0xc1, 0xab, 0x27,
+        0x0f, 0xb5, 0x29, 0x1f, 0x95, 0x87, 0x31, 0x60, 0x65, 0xc0, 0x03, 0xed, 0x4e, 0xe5, 0xb1,
+        0x06, 0x3d, 0x50, 0x07,
     ];
 
     let header_list = HeaderList::decode(&mut header_list_encoded, &mut header_table).unwrap();
@@ -1114,7 +1114,10 @@ pub fn test_hpack_header_list_huffman_eviction() {
     let hf3 = HeaderField::new("date".into(), "Mon, 21 Oct 2013 20:13:22 GMT".into());
     let hf4 = HeaderField::new("location".into(), "https://www.example.com".into());
     let hf5 = HeaderField::new("content-encoding".into(), "gzip".into());
-    let hf6 = HeaderField::new("set-cookie".into(), "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1".into());
+    let hf6 = HeaderField::new(
+        "set-cookie".into(),
+        "foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1".into(),
+    );
     let expected_header_list = HeaderList::new(vec![hf1, hf2, hf3, hf4, hf5, hf6]);
 
     assert_eq!(header_list, expected_header_list);
