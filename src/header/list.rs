@@ -68,6 +68,17 @@ impl HeaderList {
     }
 }
 
+impl From<Vec<HeaderField>> for HeaderList {
+    /// Create a header list from a vector of header fields.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `header_fields` - The vector of header fields.
+    fn from(header_fields: Vec<HeaderField>) -> Self {
+        Self::new(header_fields)
+    }
+}
+
 impl fmt::Display for HeaderList {
     /// Format a header list.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
