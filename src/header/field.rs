@@ -45,19 +45,19 @@ impl HeaderField {
     }
 
     /// Build a header field from a representation and a header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_representation` - The representation of the header field.
     /// * `header_table` - The header table to use.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `Http2Error::InvalidHeaderRepresentation` if the representation is invalid.
-    /// 
+    ///
     /// # Returns
-    /// 
-    /// * `Ok(Some(header_field))` if the representation is a header field. 
+    ///
+    /// * `Ok(Some(header_field))` if the representation is a header field.
     /// * `Ok(None)` if the representation is a header size update.
     pub fn from_representation(
         header_representation: HeaderRepresentation,
@@ -122,7 +122,7 @@ impl HeaderField {
                 // Try to retrieve the header field name from the header table.
                 let name = header_table.get(index)?.name();
 
-                // Build the header field.  
+                // Build the header field.
                 let header_field = HeaderField::new(name, value.into());
 
                 Ok(Some(header_field))
@@ -147,19 +147,22 @@ impl HeaderField {
 
     /// Build a representation from a header field and a header table updating
     /// the header table when possible.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_table` - The header table to use.
     pub fn into_representation(&self, header_table: &mut HeaderTable) -> HeaderRepresentation {
         if let Some(index) = header_table.contains(self) {
-            return HeaderRepresentation::Indexed(index.into())
+            return HeaderRepresentation::Indexed(index.into());
         }
 
         if let Some(index) = header_table.contains_name(self) {
             // Add a new entry to the header table.
             header_table.add_entry(self.clone());
-            return HeaderRepresentation::IncrementalIndexingIndexedName(index.into(), self.value().into())
+            return HeaderRepresentation::IncrementalIndexingIndexedName(
+                index.into(),
+                self.value().into(),
+            );
         }
 
         // Add a new entry to the header table.
@@ -167,15 +170,21 @@ impl HeaderField {
         HeaderRepresentation::IncrementalIndexingNewName(self.name().into(), self.value().into())
     }
 
-    /// Build a representation from a header field and a header table without 
+    /// Build a representation from a header field and a header table without
     /// indexing the header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_table` - The header table to use.
-    pub fn into_representation_without_indexing(&self, header_table: &mut HeaderTable) -> HeaderRepresentation {
+    pub fn into_representation_without_indexing(
+        &self,
+        header_table: &mut HeaderTable,
+    ) -> HeaderRepresentation {
         if let Some(index) = header_table.contains_name(self) {
-            return HeaderRepresentation::WithoutIndexingIndexedName(index.into(), self.value().into())
+            return HeaderRepresentation::WithoutIndexingIndexedName(
+                index.into(),
+                self.value().into(),
+            );
         }
 
         HeaderRepresentation::WithoutIndexingNewName(self.name().into(), self.value().into())
@@ -183,13 +192,16 @@ impl HeaderField {
 
     /// Build a representation from a header field and a header table never
     /// indexing the header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_table` - The header table to use.
-    pub fn into_representation_never_index(&self, header_table: &mut HeaderTable) -> HeaderRepresentation {
+    pub fn into_representation_never_index(
+        &self,
+        header_table: &mut HeaderTable,
+    ) -> HeaderRepresentation {
         if let Some(index) = header_table.contains_name(self) {
-            return HeaderRepresentation::NeverIndexedIndexedName(index.into(), self.value().into())
+            return HeaderRepresentation::NeverIndexedIndexedName(index.into(), self.value().into());
         }
 
         HeaderRepresentation::NeverIndexedNewName(self.name().into(), self.value().into())

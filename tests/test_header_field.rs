@@ -2,7 +2,6 @@ use http2::header::field::{HeaderField, HeaderName, HeaderValue};
 use http2::header::representation::HeaderRepresentation;
 use http2::header::table::HeaderTable;
 
-
 #[test]
 pub fn test_hpack_header_field() {
     // Example 1: Decoding Literal Header Field with Indexing
@@ -40,21 +39,29 @@ pub fn test_hpack_header_field() {
 
     let header_representation = header_field.into_representation(&mut header_table);
 
-    let mut bytes = header_representation.encode(false);
-    
-    assert!(bytes == vec![
-        0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d,
-        0x2d, 0x6b, 0x65, 0x79, 0x0d, 0x63, 0x75, 0x73,
-        0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64,
-        0x65, 0x72
-    ]);
+    let mut bytes = header_representation.encode(false, false);
+
+    assert!(
+        bytes
+            == vec![
+                0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79, 0x0d, 0x63,
+                0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x68, 0x65, 0x61, 0x64, 0x65, 0x72
+            ]
+    );
 
     let mut header_table = HeaderTable::new(4096);
     let header_representation = HeaderRepresentation::decode(&mut bytes).unwrap();
-    let header_field = HeaderField::from_representation(header_representation, &mut header_table).unwrap();
+    let header_field =
+        HeaderField::from_representation(header_representation, &mut header_table).unwrap();
 
-    assert_eq!(header_field.clone().unwrap().name(), HeaderName::from("custom-key".to_string()));
-    assert_eq!(header_field.clone().unwrap().value(), HeaderValue::from("custom-header".to_string()));
+    assert_eq!(
+        header_field.clone().unwrap().name(),
+        HeaderName::from("custom-key".to_string())
+    );
+    assert_eq!(
+        header_field.clone().unwrap().value(),
+        HeaderValue::from("custom-header".to_string())
+    );
     assert_eq!(header_table.get_dynamic_table_size(), 55);
 
     // Example 2: Literal Header Field without Indexing
@@ -86,21 +93,31 @@ pub fn test_hpack_header_field() {
     let header_value = HeaderValue::from("/sample/path".to_string());
     let header_field = HeaderField::new(header_name, header_value);
 
-    let header_representation = header_field.into_representation_without_indexing(&mut header_table);
+    let header_representation =
+        header_field.into_representation_without_indexing(&mut header_table);
 
-    let mut bytes = header_representation.encode(false);
+    let mut bytes = header_representation.encode(false, false);
 
-    assert!(bytes == vec![
-        0x04, 0x0c, 0x2f, 0x73, 0x61, 0x6d, 0x70,
-        0x6c, 0x65, 0x2f, 0x70, 0x61, 0x74, 0x68
-    ]);
+    assert!(
+        bytes
+            == vec![
+                0x04, 0x0c, 0x2f, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2f, 0x70, 0x61, 0x74, 0x68
+            ]
+    );
 
     let mut header_table = HeaderTable::new(4096);
     let header_representation = HeaderRepresentation::decode(&mut bytes).unwrap();
-    let header_field = HeaderField::from_representation(header_representation, &mut header_table).unwrap();
+    let header_field =
+        HeaderField::from_representation(header_representation, &mut header_table).unwrap();
 
-    assert_eq!(header_field.clone().unwrap().name(), HeaderName::from(":path".to_string()));
-    assert_eq!(header_field.clone().unwrap().value(), HeaderValue::from("/sample/path".to_string()));
+    assert_eq!(
+        header_field.clone().unwrap().name(),
+        HeaderName::from(":path".to_string())
+    );
+    assert_eq!(
+        header_field.clone().unwrap().value(),
+        HeaderValue::from("/sample/path".to_string())
+    );
     assert_eq!(header_table.get_dynamic_table_size(), 0);
 
     // Example 3: Literal Header Field Never Indexed
@@ -136,21 +153,30 @@ pub fn test_hpack_header_field() {
 
     let header_representation = header_field.into_representation_never_index(&mut header_table);
 
-    let mut bytes = header_representation.encode(false);
+    let mut bytes = header_representation.encode(false, false);
 
-    assert!(bytes == vec![
-        0x10, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77,
-        0x6f, 0x72, 0x64, 0x06, 0x73, 0x65, 0x63,
-        0x72, 0x65, 0x74
-    ]);
+    assert!(
+        bytes
+            == vec![
+                0x10, 0x08, 0x70, 0x61, 0x73, 0x73, 0x77, 0x6f, 0x72, 0x64, 0x06, 0x73, 0x65, 0x63,
+                0x72, 0x65, 0x74
+            ]
+    );
 
     let mut header_table = HeaderTable::new(4096);
 
     let header_representation = HeaderRepresentation::decode(&mut bytes).unwrap();
-    let header_field = HeaderField::from_representation(header_representation, &mut header_table).unwrap();
+    let header_field =
+        HeaderField::from_representation(header_representation, &mut header_table).unwrap();
 
-    assert_eq!(header_field.clone().unwrap().name(), HeaderName::from("password".to_string()));
-    assert_eq!(header_field.clone().unwrap().value(), HeaderValue::from("secret".to_string()));
+    assert_eq!(
+        header_field.clone().unwrap().name(),
+        HeaderName::from("password".to_string())
+    );
+    assert_eq!(
+        header_field.clone().unwrap().value(),
+        HeaderValue::from("secret".to_string())
+    );
     assert_eq!(header_table.get_dynamic_table_size(), 0);
 
     // Example 4 : Indexed Header Field
@@ -181,18 +207,23 @@ pub fn test_hpack_header_field() {
 
     let header_representation = header_field.into_representation(&mut header_table);
 
-    let mut bytes = header_representation.encode(false);
+    let mut bytes = header_representation.encode(false, false);
 
-    assert!(bytes == vec![
-        0x82
-    ]);
+    assert!(bytes == vec![0x82]);
 
     let mut header_table = HeaderTable::new(4096);
 
     let header_representation = HeaderRepresentation::decode(&mut bytes).unwrap();
-    let header_field = HeaderField::from_representation(header_representation, &mut header_table).unwrap();
+    let header_field =
+        HeaderField::from_representation(header_representation, &mut header_table).unwrap();
 
-    assert_eq!(header_field.clone().unwrap().name(), HeaderName::from(":method".to_string()));
-    assert_eq!(header_field.clone().unwrap().value(), HeaderValue::from("GET".to_string()));
+    assert_eq!(
+        header_field.clone().unwrap().name(),
+        HeaderName::from(":method".to_string())
+    );
+    assert_eq!(
+        header_field.clone().unwrap().value(),
+        HeaderValue::from("GET".to_string())
+    );
     assert_eq!(header_table.get_dynamic_table_size(), 0);
 }

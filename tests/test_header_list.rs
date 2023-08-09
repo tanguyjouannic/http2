@@ -1,7 +1,6 @@
+use http2::header::field::{HeaderField, HeaderName, HeaderValue};
 use http2::header::list::HeaderList;
 use http2::header::table::HeaderTable;
-use http2::header::field::{HeaderField, HeaderName, HeaderValue};
-
 
 #[test]
 pub fn test_header_list() {
@@ -49,38 +48,41 @@ pub fn test_header_list() {
     // :authority: www.example.com
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":method".to_string()),
-        HeaderValue::from("GET".to_string())
+        HeaderValue::from("GET".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from(":scheme".to_string()),
-        HeaderValue::from("http".to_string())
+        HeaderValue::from("http".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from(":path".to_string()),
-        HeaderValue::from("/".to_string())
+        HeaderValue::from("/".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from(":authority".to_string()),
-        HeaderValue::from("www.example.com".to_string())
+        HeaderValue::from("www.example.com".to_string()),
     );
     let header_list = HeaderList::from(vec![
         header_field_1,
         header_field_2,
         header_field_3,
-        header_field_4
+        header_field_4,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
 
-    assert_eq!(encoded_header_list, vec![
-        0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77,
-        0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65,
-        0x2e, 0x63, 0x6f, 0x6d
-    ]);
+    assert_eq!(
+        encoded_header_list,
+        vec![
+            0x82, 0x86, 0x84, 0x41, 0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70,
+            0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d
+        ]
+    );
 
     assert_eq!(header_table_sender.get_dynamic_table_size(), 57);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 57);
@@ -131,41 +133,42 @@ pub fn test_header_list() {
     // cache-control: no-cache
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":method".to_string()),
-        HeaderValue::from("GET".to_string())
+        HeaderValue::from("GET".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from(":scheme".to_string()),
-        HeaderValue::from("http".to_string())
+        HeaderValue::from("http".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from(":path".to_string()),
-        HeaderValue::from("/".to_string())
+        HeaderValue::from("/".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from(":authority".to_string()),
-        HeaderValue::from("www.example.com".to_string())
+        HeaderValue::from("www.example.com".to_string()),
     );
     let header_field_5: HeaderField = HeaderField::new(
         HeaderName::from("cache-control".to_string()),
-        HeaderValue::from("no-cache".to_string())
+        HeaderValue::from("no-cache".to_string()),
     );
     let header_list = HeaderList::from(vec![
         header_field_1,
         header_field_2,
         header_field_3,
         header_field_4,
-        header_field_5
+        header_field_5,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
 
-    assert_eq!(encoded_header_list, vec![
-        0x82, 0x86, 0x84, 0xbe, 0x58, 0x08, 0x6e, 0x6f,
-        0x2d, 0x63, 0x61, 0x63, 0x68, 0x65
-    ]);
+    assert_eq!(
+        encoded_header_list,
+        vec![0x82, 0x86, 0x84, 0xbe, 0x58, 0x08, 0x6e, 0x6f, 0x2d, 0x63, 0x61, 0x63, 0x68, 0x65]
+    );
     assert_eq!(header_table_sender.get_dynamic_table_size(), 110);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 110);
@@ -219,43 +222,46 @@ pub fn test_header_list() {
     // custom-key: custom-value
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":method".to_string()),
-        HeaderValue::from("GET".to_string())
+        HeaderValue::from("GET".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from(":scheme".to_string()),
-        HeaderValue::from("https".to_string())
+        HeaderValue::from("https".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from(":path".to_string()),
-        HeaderValue::from("/index.html".to_string())
+        HeaderValue::from("/index.html".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from(":authority".to_string()),
-        HeaderValue::from("www.example.com".to_string())
+        HeaderValue::from("www.example.com".to_string()),
     );
     let header_field_5: HeaderField = HeaderField::new(
         HeaderName::from("custom-key".to_string()),
-        HeaderValue::from("custom-value".to_string())
+        HeaderValue::from("custom-value".to_string()),
     );
     let header_list = HeaderList::from(vec![
         header_field_1,
         header_field_2,
         header_field_3,
         header_field_4,
-        header_field_5
+        header_field_5,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
 
-    assert_eq!(encoded_header_list, vec![
-        0x82, 0x87, 0x85, 0xbf, 0x40, 0x0a, 0x63, 0x75,
-        0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b, 0x65, 0x79,
-        0x0c, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d,
-        0x76, 0x61, 0x6c, 0x75, 0x65
-    ]);
+    assert_eq!(
+        encoded_header_list,
+        vec![
+            0x82, 0x87, 0x85, 0xbf, 0x40, 0x0a, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x6b,
+            0x65, 0x79, 0x0c, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x2d, 0x76, 0x61, 0x6c, 0x75,
+            0x65
+        ]
+    );
     assert_eq!(header_table_sender.get_dynamic_table_size(), 164);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 164);
@@ -329,40 +335,44 @@ pub fn test_header_list_eviction() {
     // location: https://www.example.com
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":status".to_string()),
-        HeaderValue::from("302".to_string())
+        HeaderValue::from("302".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from("cache-control".to_string()),
-        HeaderValue::from("private".to_string())
+        HeaderValue::from("private".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from("date".to_string()),
-        HeaderValue::from("Mon, 21 Oct 2013 20:13:21 GMT".to_string())
+        HeaderValue::from("Mon, 21 Oct 2013 20:13:21 GMT".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from("location".to_string()),
-        HeaderValue::from("https://www.example.com".to_string())
+        HeaderValue::from("https://www.example.com".to_string()),
     );
     let header_list = HeaderList::new(vec![
         header_field_1,
         header_field_2,
         header_field_3,
-        header_field_4
+        header_field_4,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
-    
-    assert_eq!(encoded_header_list, vec![
-        0x48, 0x03, 0x33, 0x30, 0x32, 0x58, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65, 0x61,
-        0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63, 0x74, 0x20, 0x32, 0x30,
-        0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32, 0x31, 0x20, 0x47, 0x4d, 0x54,
-        0x6e, 0x17, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x77, 0x77, 0x77, 0x2e, 0x65,
-        0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d,
-    ]);
+
+    assert_eq!(
+        encoded_header_list,
+        vec![
+            0x48, 0x03, 0x33, 0x30, 0x32, 0x58, 0x07, 0x70, 0x72, 0x69, 0x76, 0x61, 0x74, 0x65,
+            0x61, 0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63, 0x74, 0x20,
+            0x32, 0x30, 0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32, 0x31, 0x20,
+            0x47, 0x4d, 0x54, 0x6e, 0x17, 0x68, 0x74, 0x74, 0x70, 0x73, 0x3a, 0x2f, 0x2f, 0x77,
+            0x77, 0x77, 0x2e, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d,
+        ]
+    );
 
     assert_eq!(header_table_sender.get_dynamic_table_size(), 222);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 222);
@@ -415,35 +425,37 @@ pub fn test_header_list_eviction() {
     // location: https://www.example.com
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":status".to_string()),
-        HeaderValue::from("307".to_string())
+        HeaderValue::from("307".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from("cache-control".to_string()),
-        HeaderValue::from("private".to_string())
+        HeaderValue::from("private".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from("date".to_string()),
-        HeaderValue::from("Mon, 21 Oct 2013 20:13:21 GMT".to_string())
+        HeaderValue::from("Mon, 21 Oct 2013 20:13:21 GMT".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from("location".to_string()),
-        HeaderValue::from("https://www.example.com".to_string())
+        HeaderValue::from("https://www.example.com".to_string()),
     );
     let header_list = HeaderList::new(vec![
         header_field_1,
         header_field_2,
         header_field_3,
-        header_field_4
+        header_field_4,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
 
-    assert_eq!(encoded_header_list, vec![
-        0x48, 0x03, 0x33, 0x30, 0x37, 0xc1, 0xc0, 0xbf
-    ]);
+    assert_eq!(
+        encoded_header_list,
+        vec![0x48, 0x03, 0x33, 0x30, 0x37, 0xc1, 0xc0, 0xbf]
+    );
     assert_eq!(header_table_sender.get_dynamic_table_size(), 222);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 222);
@@ -530,27 +542,27 @@ pub fn test_header_list_eviction() {
     // set-cookie: foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1
     let header_field_1: HeaderField = HeaderField::new(
         HeaderName::from(":status".to_string()),
-        HeaderValue::from("200".to_string())
+        HeaderValue::from("200".to_string()),
     );
     let header_field_2: HeaderField = HeaderField::new(
         HeaderName::from("cache-control".to_string()),
-        HeaderValue::from("private".to_string())
+        HeaderValue::from("private".to_string()),
     );
     let header_field_3: HeaderField = HeaderField::new(
         HeaderName::from("date".to_string()),
-        HeaderValue::from("Mon, 21 Oct 2013 20:13:22 GMT".to_string())
+        HeaderValue::from("Mon, 21 Oct 2013 20:13:22 GMT".to_string()),
     );
     let header_field_4: HeaderField = HeaderField::new(
         HeaderName::from("location".to_string()),
-        HeaderValue::from("https://www.example.com".to_string())
+        HeaderValue::from("https://www.example.com".to_string()),
     );
     let header_field_5: HeaderField = HeaderField::new(
         HeaderName::from("content-encoding".to_string()),
-        HeaderValue::from("gzip".to_string())
+        HeaderValue::from("gzip".to_string()),
     );
     let header_field_6: HeaderField = HeaderField::new(
         HeaderName::from("set-cookie".to_string()),
-        HeaderValue::from("foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1".to_string())
+        HeaderValue::from("foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1".to_string()),
     );
     let header_list: HeaderList = HeaderList::new(vec![
         header_field_1,
@@ -558,23 +570,27 @@ pub fn test_header_list_eviction() {
         header_field_3,
         header_field_4,
         header_field_5,
-        header_field_6
+        header_field_6,
     ]);
 
     let mut encoded_header_list = header_list.encode(&mut header_table_sender).unwrap();
 
-    assert_eq!(encoded_header_list, vec![
-        0x88, 0xc1, 0x61, 0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63, 0x74,
-        0x20, 0x32, 0x30, 0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32, 0x32, 0x20,
-        0x47, 0x4d, 0x54, 0xc0, 0x5a, 0x04, 0x67, 0x7a, 0x69, 0x70, 0x77, 0x38, 0x66, 0x6f, 0x6f,
-        0x3d, 0x41, 0x53, 0x44, 0x4a, 0x4b, 0x48, 0x51, 0x4b, 0x42, 0x5a, 0x58, 0x4f, 0x51, 0x57,
-        0x45, 0x4f, 0x50, 0x49, 0x55, 0x41, 0x58, 0x51, 0x57, 0x45, 0x4f, 0x49, 0x55, 0x3b, 0x20,
-        0x6d, 0x61, 0x78, 0x2d, 0x61, 0x67, 0x65, 0x3d, 0x33, 0x36, 0x30, 0x30, 0x3b, 0x20, 0x76,
-        0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x31,
-    ]);
+    assert_eq!(
+        encoded_header_list,
+        vec![
+            0x88, 0xc1, 0x61, 0x1d, 0x4d, 0x6f, 0x6e, 0x2c, 0x20, 0x32, 0x31, 0x20, 0x4f, 0x63,
+            0x74, 0x20, 0x32, 0x30, 0x31, 0x33, 0x20, 0x32, 0x30, 0x3a, 0x31, 0x33, 0x3a, 0x32,
+            0x32, 0x20, 0x47, 0x4d, 0x54, 0xc0, 0x5a, 0x04, 0x67, 0x7a, 0x69, 0x70, 0x77, 0x38,
+            0x66, 0x6f, 0x6f, 0x3d, 0x41, 0x53, 0x44, 0x4a, 0x4b, 0x48, 0x51, 0x4b, 0x42, 0x5a,
+            0x58, 0x4f, 0x51, 0x57, 0x45, 0x4f, 0x50, 0x49, 0x55, 0x41, 0x58, 0x51, 0x57, 0x45,
+            0x4f, 0x49, 0x55, 0x3b, 0x20, 0x6d, 0x61, 0x78, 0x2d, 0x61, 0x67, 0x65, 0x3d, 0x33,
+            0x36, 0x30, 0x30, 0x3b, 0x20, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x3d, 0x31,
+        ]
+    );
     assert_eq!(header_table_sender.get_dynamic_table_size(), 215);
 
-    let decoded_header_list = HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
+    let decoded_header_list =
+        HeaderList::decode(&mut encoded_header_list, &mut header_table_receiver).unwrap();
 
     assert_eq!(decoded_header_list, header_list);
     assert_eq!(header_table_receiver.get_dynamic_table_size(), 215);

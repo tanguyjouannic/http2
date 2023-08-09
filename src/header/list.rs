@@ -5,7 +5,6 @@ use crate::header::field::HeaderField;
 use crate::header::representation::HeaderRepresentation;
 use crate::header::table::HeaderTable;
 
-
 /// A list of HPACK header fields.
 #[derive(Clone, Debug, PartialEq)]
 pub struct HeaderList {
@@ -40,17 +39,19 @@ impl HeaderList {
             }
         }
 
-        Ok(Self { header_fields: headers })
+        Ok(Self {
+            header_fields: headers,
+        })
     }
 
     /// Encode a header list into a byte vector.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_table` - The header table to use.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A byte vector containing the encoded header list.
     pub fn encode(&self, header_table: &mut HeaderTable) -> Result<Vec<u8>, Http2Error> {
         let mut bytes: Vec<u8> = Vec::new();
@@ -61,7 +62,7 @@ impl HeaderList {
             let header_representation = header_field.into_representation(header_table);
 
             // Encode the header representation. TODO: Manage Huffman encoding.
-            bytes.append(&mut header_representation.encode(false));
+            bytes.append(&mut header_representation.encode(false, false));
         }
 
         Ok(bytes)
@@ -70,9 +71,9 @@ impl HeaderList {
 
 impl From<Vec<HeaderField>> for HeaderList {
     /// Create a header list from a vector of header fields.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_fields` - The vector of header fields.
     fn from(header_fields: Vec<HeaderField>) -> Self {
         Self::new(header_fields)

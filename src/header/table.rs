@@ -55,40 +55,40 @@ impl HeaderTable {
     }
 
     /// Get the index of a header field in the header table.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to search for.
     pub fn contains(&self, header_field: &HeaderField) -> Option<usize> {
         if let Some(index) = self.static_table.contains(header_field) {
-            return Some(index + 1)
+            return Some(index + 1);
         };
 
         if let Some(index) = self.dynamic_table.contains(header_field) {
-            return Some(index + self.static_table.len() + 1)
+            return Some(index + self.static_table.len() + 1);
         };
 
         None
     }
 
-    /// Get the index of a header field that has the same name as 
+    /// Get the index of a header field that has the same name as
     /// the given header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to check.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Some(index)` - The index of the header field in the header table.
     /// * `None` - The header field is not in the header table.
     pub fn contains_name(&self, header_field: &HeaderField) -> Option<usize> {
         if let Some(index) = self.static_table.contains_name(header_field) {
-            return Some(index + 1)
+            return Some(index + 1);
         };
 
         if let Some(index) = self.dynamic_table.contains_name(header_field) {
-            return Some(index + self.static_table.len() + 1)
+            return Some(index + self.static_table.len() + 1);
         };
 
         None
@@ -169,13 +169,13 @@ impl DynamicTable {
     }
 
     /// Check if the dynamic table contains a header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to check.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Some(index)` - The index of the header field in the dynamic table.
     /// * `None` - The header field is not in the dynamic table.
     pub fn contains(&self, header_field: &HeaderField) -> Option<usize> {
@@ -189,13 +189,13 @@ impl DynamicTable {
 
     /// Check if the dynamic table contains a header field that has the same name as
     /// the given header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to check.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Some(index)` - The index of the header field name in the dynamic table.
     /// * `None` - The header field name is not in the dynamic table.
     pub fn contains_name(&self, header_field: &HeaderField) -> Option<usize> {
@@ -330,13 +330,13 @@ impl StaticTable {
     }
 
     /// Check if the static table contains a header field.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to check.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Some(index)` - The index of the header field in the static table.
     /// * `None` - The header field is not in the static table.
     pub fn contains(&self, header_field: &HeaderField) -> Option<usize> {
@@ -349,13 +349,13 @@ impl StaticTable {
     }
 
     /// Check if the static table contains a header field name.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header_field` - The header field to check.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Some(index)` - The index of the header field name in the static table.
     /// * `None` - The header field name is not in the static table.
     pub fn contains_name(&self, header_field: &HeaderField) -> Option<usize> {

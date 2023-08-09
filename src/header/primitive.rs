@@ -3,7 +3,6 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::header::huffman::Tree;
 
-
 /// HTTP/2 HPACK Integer Primitive.
 ///
 /// Integers are used to represent name indexes, header field indexes, or

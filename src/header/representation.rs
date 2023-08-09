@@ -203,7 +203,7 @@ impl HeaderRepresentation {
     }
 
     /// Encodes the header field representation into a byte vector.
-    pub fn encode(&self, huffman_encode: bool) -> Vec<u8> {
+    pub fn encode(&self, huffman_encode_name: bool, huffman_encode_value: bool) -> Vec<u8> {
         match self {
             HeaderRepresentation::Indexed(index) => {
                 let mut bytes = index.encode(7).unwrap();
@@ -213,40 +213,40 @@ impl HeaderRepresentation {
             HeaderRepresentation::IncrementalIndexingIndexedName(index, value) => {
                 let mut bytes = index.encode(6).unwrap();
                 bytes[0] |= 0b0100_0000;
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::IncrementalIndexingNewName(name, value) => {
                 let mut bytes: Vec<u8> = Vec::new();
                 bytes.push(0b0100_0000);
-                bytes.append(&mut name.encode(huffman_encode).unwrap());
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut name.encode(huffman_encode_name).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::WithoutIndexingIndexedName(index, value) => {
                 let mut bytes = index.encode(4).unwrap();
                 bytes[0] |= 0b0000_0000;
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::WithoutIndexingNewName(name, value) => {
                 let mut bytes: Vec<u8> = Vec::new();
                 bytes.push(0b0000_0000);
-                bytes.append(&mut name.encode(huffman_encode).unwrap());
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut name.encode(huffman_encode_name).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::NeverIndexedIndexedName(index, value) => {
                 let mut bytes = index.encode(4).unwrap();
                 bytes[0] |= 0b0001_0000;
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::NeverIndexedNewName(name, value) => {
                 let mut bytes: Vec<u8> = Vec::new();
                 bytes.push(0b0001_0000);
-                bytes.append(&mut name.encode(huffman_encode).unwrap());
-                bytes.append(&mut value.encode(huffman_encode).unwrap());
+                bytes.append(&mut name.encode(huffman_encode_name).unwrap());
+                bytes.append(&mut value.encode(huffman_encode_value).unwrap());
                 bytes
             }
             HeaderRepresentation::SizeUpdate(max_size) => {
