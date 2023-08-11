@@ -1,9 +1,11 @@
 pub mod data;
+pub mod headers;
 
 use std::fmt;
 
 use crate::error::Http2Error;
 use crate::frame::data::Data;
+use crate::frame::headers::Headers;
 
 /// HTTP/2 frame header.
 ///
@@ -108,6 +110,7 @@ impl TryFrom<&mut Vec<u8>> for Frame {
 
         let frame = match header.frame_type() {
             0x0 => Frame::Data(Data::deserialize(header, payload)),
+            // 0x1 => Frame::Headers(Headers::deserialize(header, payload)),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -137,8 +140,6 @@ impl fmt::Display for Frame {
         }
     }
 }
-
-pub struct Headers {}
 
 pub struct Priority {}
 

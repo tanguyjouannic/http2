@@ -2,8 +2,9 @@ use std::fmt;
 
 use crate::frame::FrameHeader;
 
+
 /// DATA Frame flags.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DataFlag {
     EndStream,
     Padded,
@@ -28,7 +29,7 @@ pub enum DataFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Data {
-    payload: Vec<u8>,
+    data: Vec<u8>,
     stream: u32,
     flags: Vec<DataFlag>,
 }
@@ -51,10 +52,21 @@ impl Data {
             flags.push(DataFlag::Padded);
         }
 
-        Self {
-            payload,
-            stream: header.stream_identifier(),
-            flags: Vec::new(),
+        if flags.contains(&DataFlag::Padded) {
+            let pad_length = payload[0] as usize;
+            let data = payload[1..payload.len() - pad_length + 1].to_vec();
+
+            Self {
+                data,
+                stream: header.stream_identifier(),
+                flags,
+            }
+        } else {
+            Self {
+                data: payload,
+                stream: header.stream_identifier(),
+                flags,
+            }
         }
     }
 }
@@ -65,6 +77,6 @@ impl fmt::Display for Data {
         write!(f, "Data Frame\n")?;
         write!(f, "Stream Identifier: {}\n", self.stream)?;
         write!(f, "Flags: {:?}\n", self.flags)?;
-        write!(f, "Payload: {}\n", String::from_utf8_lossy(&self.payload))
+        write!(f, "Data: {}\n", String::from_utf8_lossy(&self.data))
     }
 }
