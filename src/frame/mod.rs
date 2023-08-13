@@ -6,6 +6,7 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::frame::data::Data;
 use crate::frame::headers::Headers;
+use crate::header::table::HeaderTable;
 
 /// HTTP/2 frame header.
 ///
@@ -16,6 +17,7 @@ use crate::frame::headers::Headers;
 ///  +-+-------------+---------------+-------------------------------+
 ///  |R|                 Stream Identifier (31)                      |
 ///  +-+-------------------------------------------------------------+
+#[derive(Debug)]
 pub struct FrameHeader {
     payload_length: u32,
     frame_type: u8,
@@ -51,7 +53,7 @@ impl FrameHeader {
     }
 }
 
-impl TryFrom<Vec<u8>> for FrameHeader {
+impl TryFrom<&[u8]> for FrameHeader {
     type Error = Http2Error;
 
     /// Try to extract a frame header from a bytes stream.
@@ -59,7 +61,13 @@ impl TryFrom<Vec<u8>> for FrameHeader {
     /// # Arguments
     ///
     /// * `bytes` - The bytes stream to extract the frame header from.
-    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        // Check if the bytes stream is exactly 9 bytes.
+        if bytes.len() != 9 {
+            return Err(Http2Error::FrameError(format!("Frame header length is not 9: {}", bytes.len())));
+        }
+
+        // Retrieve the frame header fields.
         let payload_length = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]);
         let frame_type = bytes[3];
         let flags = bytes[4];
@@ -80,7 +88,7 @@ impl TryFrom<Vec<u8>> for FrameHeader {
 #[derive(Debug)]
 pub enum Frame {
     Data(Data),
-    // Headers(Headers),
+    Headers(Headers),
     // Priority(Priority),
     // RstStream(RstStream),
     // Settings(Settings),
@@ -91,30 +99,26 @@ pub enum Frame {
     // Continuation(Continuation),
 }
 
-impl TryFrom<&mut Vec<u8>> for Frame {
-    type Error = Http2Error;
-
-    /// Try to extract a frame from a bytes stream.
-    ///
+impl Frame {
+    /// Deserialize a frame based on a frame header and payload.
+    /// 
+    /// The payload has to have a length equal to the length in the frame header.
+    /// The header table is updated if necessary.
+    /// 
     /// # Arguments
-    ///
-    /// * `bytes` - The bytes stream to extract the frame from.
-    fn try_from(bytes: &mut Vec<u8>) -> Result<Self, Self::Error> {
-        // Retrieve the frame header.
-        let header: FrameHeader = bytes[0..9].to_vec().try_into()?;
-        *bytes = bytes[9..].to_vec();
-
-        // Get the frame payload.
-        let payload = bytes[0..header.payload_length() as usize].to_vec();
-        *bytes = bytes[header.payload_length() as usize..].to_vec();
-
-        let frame = match header.frame_type() {
-            0x0 => Frame::Data(Data::deserialize(header, payload)),
-            // 0x1 => Frame::Headers(Headers::deserialize(header, payload)),
+    /// 
+    /// * `frame_header` - The frame header.
+    /// * `payload` - The frame payload.
+    /// * `header_table` - The header table.
+    pub fn deserialize(frame_header: FrameHeader, payload: Vec<u8>, header_table: &mut HeaderTable) -> Result<Self, Http2Error> {
+        // Deserialize the frame depending on the frame type in the header.
+        let frame = match frame_header.frame_type() {
+            0x0 => Frame::Data(Data::deserialize(frame_header, payload)?),
+            0x1 => Frame::Headers(Headers::deserialize(frame_header, payload, header_table)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
-                    header.frame_type()
+                    frame_header.frame_type()
                 )))
             }
         };
@@ -128,7 +132,7 @@ impl fmt::Display for Frame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Frame::Data(data) => write!(f, "{}", data),
-            // Frame::Headers(headers) => write!(f, "{}", headers),
+            Frame::Headers(headers) => write!(f, "{}", headers),
             // Frame::Priority(priority) => write!(f, "{}", priority),
             // Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
             // Frame::Settings(settings) => write!(f, "{}", settings),

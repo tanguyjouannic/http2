@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::frame::FrameHeader;
+use crate::{frame::FrameHeader, error::Http2Error};
 
 
 /// DATA Frame flags.
@@ -8,6 +8,27 @@ use crate::frame::FrameHeader;
 pub enum DataFlag {
     EndStream,
     Padded,
+}
+
+impl DataFlag {
+    /// Parse the flags from a byte.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte to parse the flags from.
+    pub fn parse_flags(byte: u8) -> Vec<DataFlag> {
+        let mut flags: Vec<DataFlag> = Vec::new();
+
+        if byte & 0x1 != 0 {
+            flags.push(DataFlag::EndStream);
+        }
+
+        if byte & 0x8 != 0 {
+            flags.push(DataFlag::Padded);
+        }
+
+        flags
+    }
 }
 
 /// DATA Frame structure.
@@ -29,9 +50,9 @@ pub enum DataFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Data {
+    header: FrameHeader,
     data: Vec<u8>,
-    stream: u32,
-    flags: Vec<DataFlag>,
+    parsed_flags: Vec<DataFlag>,
 }
 
 impl Data {
@@ -41,33 +62,25 @@ impl Data {
     /// 
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Self {
-        let mut flags = Vec::new();
+    pub fn deserialize(header: FrameHeader, mut payload: Vec<u8>) -> Result<Self, Http2Error> {
+        // Parse the flags from the header.
+        let parsed_flags: Vec<DataFlag> = DataFlag::parse_flags(header.flags());
 
-        if header.flags() & 0x1 != 0 {
-            flags.push(DataFlag::EndStream);
-        }
-
-        if header.flags() & 0x8 != 0 {
-            flags.push(DataFlag::Padded);
-        }
-
-        if flags.contains(&DataFlag::Padded) {
+        if parsed_flags.contains(&DataFlag::Padded) {
             let pad_length = payload[0] as usize;
-            let data = payload[1..payload.len() - pad_length + 1].to_vec();
 
-            Self {
-                data,
-                stream: header.stream_identifier(),
-                flags,
+            // Check that the padding length is not 0.
+            if pad_length == 0 {
+                return Err(Http2Error::FrameError("Padding length is 0".to_string()));
             }
-        } else {
-            Self {
-                data: payload,
-                stream: header.stream_identifier(),
-                flags,
-            }
+            payload = payload[1..payload.len() - pad_length].to_vec();
         }
+
+        Ok(Self {
+            header,
+            data: payload,
+            parsed_flags,
+        })
     }
 }
 
@@ -75,8 +88,7 @@ impl fmt::Display for Data {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Data Frame\n")?;
-        write!(f, "Stream Identifier: {}\n", self.stream)?;
-        write!(f, "Flags: {:?}\n", self.flags)?;
+        write!(f, "Parsed Flags: {:?}\n", self.parsed_flags)?;
         write!(f, "Data: {}\n", String::from_utf8_lossy(&self.data))
     }
 }
