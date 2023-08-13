@@ -1,11 +1,13 @@
 pub mod data;
 pub mod headers;
+pub mod priority;
 
 use std::fmt;
 
 use crate::error::Http2Error;
 use crate::frame::data::Data;
 use crate::frame::headers::Headers;
+use crate::frame::priority::Priority;
 use crate::header::table::HeaderTable;
 
 /// HTTP/2 frame header.
@@ -89,7 +91,7 @@ impl TryFrom<&[u8]> for FrameHeader {
 pub enum Frame {
     Data(Data),
     Headers(Headers),
-    // Priority(Priority),
+    Priority(Priority),
     // RstStream(RstStream),
     // Settings(Settings),
     // PushPromise(PushPromise),
@@ -115,6 +117,7 @@ impl Frame {
         let frame = match frame_header.frame_type() {
             0x0 => Frame::Data(Data::deserialize(frame_header, payload)?),
             0x1 => Frame::Headers(Headers::deserialize(frame_header, payload, header_table)?),
+            0x2 => Frame::Priority(Priority::deserialize(frame_header, payload)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -133,7 +136,7 @@ impl fmt::Display for Frame {
         match self {
             Frame::Data(data) => write!(f, "{}", data),
             Frame::Headers(headers) => write!(f, "{}", headers),
-            // Frame::Priority(priority) => write!(f, "{}", priority),
+            Frame::Priority(priority) => write!(f, "{}", priority),
             // Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
             // Frame::Settings(settings) => write!(f, "{}", settings),
             // Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
@@ -144,8 +147,6 @@ impl fmt::Display for Frame {
         }
     }
 }
-
-pub struct Priority {}
 
 pub struct RstStream {}
 
