@@ -4,14 +4,17 @@ use http2::{
 };
 
 #[test]
-pub fn test_rst_stream_frame() {
-    // Test parsing RST_STREAM frame.
+pub fn test_settings_frame() {
+    // Test parsing SETTINGS frame.
     let mut bytes: Vec<u8> = vec![
-        0x00, 0x00, 0x04, // Length = 31
-        0x03, // Frame Type = RST_STREAM
+        0x00, 0x00, 0x0c, // Length = 12
+        0x04, // Frame Type = SETTINGS
         0x00, // Flags = None
         0x00, 0x00, 0x00, 0x03, // Stream Identifier = 3
-        0x00, 0x00, 0x00, 0x05, // Error code = 5
+        0x00, 0x01, // Parameter Identifier = SETTINGS_HEADER_TABLE_SIZE
+        0x00, 0x00, 0x00, 0xff, // Parameter Value = 255
+        0x00, 0x02, // Parameter Identifier = SETTINGS_ENABLE_PUSH
+        0x00, 0x00, 0x00, 0x00, // Parameter Value = 0
     ];
 
     // Create a header table.
