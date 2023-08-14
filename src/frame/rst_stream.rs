@@ -13,7 +13,6 @@ use crate::{error::Http2Error, frame::FrameHeader};
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct RstStream {
-    header: FrameHeader,
     error_code: u32,
 }
 
@@ -24,7 +23,7 @@ impl RstStream {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
         // Check if the payload has the correct length.
         if payload.len() != 4 {
             return Err(Http2Error::FrameError(format!(
@@ -34,7 +33,6 @@ impl RstStream {
         }
 
         Ok(Self {
-            header,
             error_code: u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]),
         })
     }

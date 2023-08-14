@@ -37,12 +37,12 @@ pub enum SettingsParameter {
 }
 
 impl SettingsParameter {
-    /// Try to convert a vector of bytes to a vector of SETTINGS parameters.
+    /// Deserialize a vector of bytes to a vector of SETTINGS parameters.
     /// 
     /// # Arguments
     /// 
-    /// * `bytes` - The vector of bytes to convert.
-    fn from_bytes(mut bytes: Vec<u8>) -> Result<Vec<SettingsParameter>, Http2Error> {
+    /// * `bytes` - The vector of bytes to deserialize.
+    pub fn deserialize(bytes: Vec<u8>) -> Result<Vec<SettingsParameter>, Http2Error> {
         // Check that the length is valid.
         if bytes.len() % 6 != 0 {
             return Err(Http2Error::FrameError(format!(
@@ -51,9 +51,10 @@ impl SettingsParameter {
             )));
         }
 
-        // Parse the parameters.
+        // Deserialize the parameters.
         let mut settings_parameters: Vec<SettingsParameter> = Vec::new();
 
+        let mut bytes = bytes;
         while bytes.len() != 0 {
             match u16::from_be_bytes([bytes[0], bytes[1]]) {
                 0x1 => {
@@ -114,8 +115,7 @@ impl SettingsParameter {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Settings {
-    header: FrameHeader,
-    parsed_flags: Vec<SettingsFlag>,
+    flags: Vec<SettingsFlag>,
     ack: bool,
     settings_parameters: Vec<SettingsParameter>,
 }
@@ -127,12 +127,12 @@ impl Settings {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
-        // Parse the flags from the header.
-        let parsed_flags: Vec<SettingsFlag> = SettingsFlag::parse_flags(header.flags());
+    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+        // Deserialize the flags from the header.
+        let flags: Vec<SettingsFlag> = SettingsFlag::parse_flags(header.flags());
 
         let mut ack: bool = false;
-        if parsed_flags.contains(&SettingsFlag::Ack) {
+        if flags.contains(&SettingsFlag::Ack) {
             ack = true;
             if payload.len() != 0 {
                 return Err(Http2Error::FrameError(
@@ -141,11 +141,11 @@ impl Settings {
             }
         }
 
-        let settings_parameters = SettingsParameter::from_bytes(payload)?;
+        // Deserialize the settings parameters.
+        let settings_parameters = SettingsParameter::deserialize(payload)?;
 
         Ok(Self {
-            header,
-            parsed_flags,
+            flags,
             ack,
             settings_parameters,
         })
@@ -156,6 +156,7 @@ impl fmt::Display for Settings {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SETTINGS Frame\n")?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Ack: {}\n", self.ack)?;
         write!(f, "Parameters:\n")?;
         for parameter in &self.settings_parameters {

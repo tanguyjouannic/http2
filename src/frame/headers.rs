@@ -16,12 +16,12 @@ pub enum HeadersFlag {
 }
 
 impl HeadersFlag {
-    /// Parse the flags from a byte.
+    /// Deserialize the flags from a byte.
     ///
     /// # Arguments
     ///
-    /// * `byte` - The byte to extract the flags from.
-    pub fn parse_flags(byte: u8) -> Vec<HeadersFlag> {
+    /// * `byte` - The byte to deserialize the flags from.
+    pub fn deserialize(byte: u8) -> Vec<HeadersFlag> {
         let mut flags: Vec<HeadersFlag> = Vec::new();
 
         if byte & 0x1 != 0 {
@@ -64,9 +64,8 @@ impl HeadersFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Headers {
-    header: FrameHeader,
     header_list: HeaderList,
-    parsed_flags: Vec<HeadersFlag>,
+    flags: Vec<HeadersFlag>,
     exclusivity: Option<bool>,
     stream_dependency: Option<u32>,
     weight: Option<u8>,
@@ -83,14 +82,14 @@ impl Headers {
     /// * `payload` - The frame payload.
     /// * `header_table` - The header table.
     pub fn deserialize(
-        header: FrameHeader,
+        header: &FrameHeader,
         mut payload: Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
-        // Parse the flags from the header.
-        let parsed_flags: Vec<HeadersFlag> = HeadersFlag::parse_flags(header.flags());
+        // Deserialize the flags from the header.
+        let flags: Vec<HeadersFlag> = HeadersFlag::deserialize(header.flags());
 
-        if parsed_flags.contains(&HeadersFlag::Padded) {
+        if flags.contains(&HeadersFlag::Padded) {
             let pad_length = payload[0] as usize;
 
             // Check that the padding length is not 0.
@@ -104,7 +103,7 @@ impl Headers {
         let mut stream_dependency: Option<u32> = None;
         let mut weight: Option<u8> = None;
 
-        if parsed_flags.contains(&HeadersFlag::Priority) {
+        if flags.contains(&HeadersFlag::Priority) {
             // Check that there is enough space for the priority fields.
             if payload.len() < 5 {
                 return Err(Http2Error::FrameError(
@@ -124,12 +123,12 @@ impl Headers {
             payload = payload[5..].to_vec();
         }
 
+        // Try to decode the header list.
         let header_list = HeaderList::decode(&mut payload, header_table)?;
 
         Ok(Self {
-            header,
             header_list,
-            parsed_flags,
+            flags,
             exclusivity,
             stream_dependency,
             weight,
@@ -141,7 +140,7 @@ impl fmt::Display for Headers {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "HEADERS Frame\n")?;
-        write!(f, "Parsed Flags: {:?}\n", self.parsed_flags)?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Exclusivity: {:?}\n", self.exclusivity)?;
         write!(f, "Stream Dependency: {:?}\n", self.stream_dependency)?;
         write!(f, "Weight: {:?}\n", self.weight)?;

@@ -9,12 +9,12 @@ pub enum ContinuationFlag {
 }
 
 impl ContinuationFlag {
-    /// Parse the flags from a byte.
+    /// Deserialize the flags from a byte.
     ///
     /// # Arguments
     ///
-    /// * `byte` - The byte to parse the flags from.
-    pub fn parse_flags(byte: u8) -> Vec<ContinuationFlag> {
+    /// * `byte` - The byte to deserialize the flags from.
+    pub fn deserialize(byte: u8) -> Vec<ContinuationFlag> {
         let mut flags: Vec<ContinuationFlag> = Vec::new();
 
         if byte & 0x4 != 0 {
@@ -38,7 +38,7 @@ impl ContinuationFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Continuation {
-    parsed_flags: Vec<ContinuationFlag>,
+    flags: Vec<ContinuationFlag>,
     header_list: HeaderList,
 }
 
@@ -50,7 +50,7 @@ impl Continuation {
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
     pub fn deserialize(
-        header: FrameHeader,
+        header: &FrameHeader,
         mut payload: Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
@@ -63,14 +63,14 @@ impl Continuation {
             )));
         }
 
-        // Parse the flags from the header.
-        let parsed_flags: Vec<ContinuationFlag> = ContinuationFlag::parse_flags(header.flags());
+        // Deserialize the flags from the header.
+        let flags: Vec<ContinuationFlag> = ContinuationFlag::deserialize(header.flags());
 
-        // Try to parse the header list.
+        // Try to decode the header list.
         let header_list = HeaderList::decode(&mut payload, header_table)?;
 
         Ok(Self {
-            parsed_flags,
+            flags,
             header_list,
         })
     }
@@ -80,6 +80,7 @@ impl fmt::Display for Continuation {
     /// Format a CONTINUATION frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {  
         write!(f, "CONTINUATION\n")?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Header List:\n{}", self.header_list)?;
         Ok(())
     }

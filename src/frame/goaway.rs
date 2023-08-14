@@ -32,7 +32,7 @@ impl Goaway {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
         // Check if the payload has a correct length.
         if payload.len() < 8 {
             return Err(Http2Error::FrameError(format!(

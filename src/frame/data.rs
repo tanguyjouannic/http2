@@ -10,12 +10,12 @@ pub enum DataFlag {
 }
 
 impl DataFlag {
-    /// Parse the flags from a byte.
+    /// Deserialize the flags from a byte.
     ///
     /// # Arguments
     ///
-    /// * `byte` - The byte to parse the flags from.
-    pub fn parse_flags(byte: u8) -> Vec<DataFlag> {
+    /// * `byte` - The byte to deserialize the flags from.
+    pub fn deserialize(byte: u8) -> Vec<DataFlag> {
         let mut flags: Vec<DataFlag> = Vec::new();
 
         if byte & 0x1 != 0 {
@@ -49,8 +49,7 @@ impl DataFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Data {
-    header: FrameHeader,
-    parsed_flags: Vec<DataFlag>,
+    flags: Vec<DataFlag>,
     data: Vec<u8>,
 }
 
@@ -61,11 +60,11 @@ impl Data {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, mut payload: Vec<u8>) -> Result<Self, Http2Error> {
-        // Parse the flags from the header.
-        let parsed_flags: Vec<DataFlag> = DataFlag::parse_flags(header.flags());
+    pub fn deserialize(header: &FrameHeader, mut payload: Vec<u8>) -> Result<Self, Http2Error> {
+        // Deserialize the flags from the header.
+        let flags: Vec<DataFlag> = DataFlag::deserialize(header.flags());
 
-        if parsed_flags.contains(&DataFlag::Padded) {
+        if flags.contains(&DataFlag::Padded) {
             let pad_length = payload[0] as usize;
 
             // Check that the padding length is not 0.
@@ -76,8 +75,7 @@ impl Data {
         }
 
         Ok(Self {
-            header,
-            parsed_flags,
+            flags,
             data: payload,
         })
     }
@@ -87,7 +85,7 @@ impl fmt::Display for Data {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "DATA Frame\n")?;
-        write!(f, "Parsed Flags: {:?}\n", self.parsed_flags)?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Data: {}\n", String::from_utf8_lossy(&self.data))
     }
 }

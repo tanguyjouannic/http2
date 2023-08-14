@@ -15,7 +15,6 @@ use crate::{error::Http2Error, frame::FrameHeader};
 ///  +-+-------------+
 #[derive(Debug)]
 pub struct Priority {
-    header: FrameHeader,
     exclusivity: bool,
     stream_dependency: u32,
     weight: u8,
@@ -28,7 +27,7 @@ impl Priority {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
         // Check if the payload has the correct length.
         if payload.len() != 5 {
             return Err(Http2Error::FrameError(format!(
@@ -48,7 +47,6 @@ impl Priority {
         let weight = payload[4];
 
         Ok(Self {
-            header,
             exclusivity,
             stream_dependency,
             weight,

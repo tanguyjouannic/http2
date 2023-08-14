@@ -49,8 +49,7 @@ impl PushPromiseFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct PushPromise {
-    header: FrameHeader,
-    parsed_flags: Vec<PushPromiseFlag>,
+    flags: Vec<PushPromiseFlag>,
     reserved: bool,
     promised_stream_id: u32,
     header_list: HeaderList,
@@ -67,7 +66,7 @@ impl PushPromise {
     /// * `payload` - The frame payload.
     /// * `header_table` - The header table.
     pub fn deserialize(
-        header: FrameHeader,
+        header: &FrameHeader,
         mut payload: Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
@@ -78,10 +77,10 @@ impl PushPromise {
             ));
         }
 
-        // Parse the flags from the header.
-        let parsed_flags: Vec<PushPromiseFlag> = PushPromiseFlag::parse_flags(header.flags());
+        // Deserialize the flags from the header.
+        let flags: Vec<PushPromiseFlag> = PushPromiseFlag::parse_flags(header.flags());
 
-        if parsed_flags.contains(&PushPromiseFlag::Padded) {
+        if flags.contains(&PushPromiseFlag::Padded) {
             let pad_length = payload[0] as usize;
 
             // Check that the padding length is not 0.
@@ -104,8 +103,7 @@ impl PushPromise {
         let header_list = HeaderList::decode(&mut payload[4..].to_vec(), header_table)?;
 
         Ok(Self {
-            header,
-            parsed_flags,
+            flags,
             reserved,
             promised_stream_id,
             header_list,
@@ -116,7 +114,7 @@ impl PushPromise {
 impl fmt::Display for PushPromise {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "PUSH_PROMISE Frame\n")?;
-        write!(f, "Parsed Flags: {:?}\n", self.parsed_flags)?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Reserved: {:?}\n", self.reserved)?;
         write!(f, "Promised Stream ID: {:?}\n", self.promised_stream_id)?;
         write!(f, "Header List:\n{}\n", self.header_list)

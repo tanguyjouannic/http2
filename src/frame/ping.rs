@@ -9,12 +9,12 @@ pub enum PingFlag {
 }
 
 impl PingFlag {
-    /// Parse the flags from a byte.
+    /// Deserialize the flags from a byte.
     ///
     /// # Arguments
     ///
-    /// * `byte` - The byte to parse the flags from.
-    pub fn parse_flags(byte: u8) -> Vec<PingFlag> {
+    /// * `byte` - The byte to deserialize the flags from.
+    pub fn deserialize(byte: u8) -> Vec<PingFlag> {
         let mut flags: Vec<PingFlag> = Vec::new();
 
         if byte & 0x1 != 0 {
@@ -39,6 +39,7 @@ impl PingFlag {
 ///  +---------------------------------------------------------------+
 #[derive(Debug)]
 pub struct Ping {
+    flags: Vec<PingFlag>,
     opaque_data: Vec<u8>,
 }
 
@@ -49,7 +50,10 @@ impl Ping {
     ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
-    pub fn deserialize(header: FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
+        // Deserialize the flags.
+        let flags = PingFlag::deserialize(header.flags());
+
         // Check if the payload has the correct length.
         if payload.len() != 8 {
             return Err(Http2Error::FrameError(format!(
@@ -58,7 +62,10 @@ impl Ping {
             )));
         }
 
-        Ok(Self { opaque_data: payload })
+        Ok(Self { 
+            flags,
+            opaque_data: payload 
+        })
     }
 }
 
@@ -66,6 +73,7 @@ impl fmt::Display for Ping {
     /// Format a PING frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "PING Frame\n")?;
+        write!(f, "Flags: {:?}\n", self.flags)?;
         write!(f, "Opaque Data: {:?}", self.opaque_data)?;
         Ok(())
     }

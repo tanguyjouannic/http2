@@ -43,6 +43,31 @@ pub struct FrameHeader {
 }
 
 impl FrameHeader {
+    /// Create a new frame header.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `payload_length` - The length of the frame payload.
+    /// * `frame_type` - The type of the frame.
+    /// * `flags` - The flags of the frame.
+    /// * `reserved` - The reserved bit of the frame.
+    /// * `stream_identifier` - The stream identifier of the frame.
+    pub fn new(
+        payload_length: u32,
+        frame_type: u8,
+        flags: u8,
+        reserved: bool,
+        stream_identifier: u32,
+    ) -> Self {
+        Self {
+            payload_length,
+            frame_type,
+            flags,
+            reserved,
+            stream_identifier,
+        }
+    }
+
     /// Get the length of the frame.
     pub fn payload_length(&self) -> u32 {
         self.payload_length
@@ -130,22 +155,22 @@ impl Frame {
     /// * `payload` - The frame payload.
     /// * `header_table` - The header table.
     pub fn deserialize(
-        frame_header: FrameHeader,
+        frame_header: &FrameHeader,
         payload: Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
         // Deserialize the frame depending on the frame type in the header.
         let frame = match frame_header.frame_type() {
-            0x0 => Frame::Data(Data::deserialize(frame_header, payload)?),
-            0x1 => Frame::Headers(Headers::deserialize(frame_header, payload, header_table)?),
-            0x2 => Frame::Priority(Priority::deserialize(frame_header, payload)?),
-            0x3 => Frame::RstStream(RstStream::deserialize(frame_header, payload)?),
-            0x4 => Frame::Settings(Settings::deserialize(frame_header, payload)?),
-            0x5 => Frame::PushPromise(PushPromise::deserialize(frame_header, payload, header_table)?),
-            0x6 => Frame::Ping(Ping::deserialize(frame_header, payload)?),
-            0x7 => Frame::GoAway(Goaway::deserialize(frame_header, payload)?),
-            0x8 => Frame::WindowUpdate(WindowUpdate::deserialize(frame_header, payload)?),
-            0x9 => Frame::Continuation(Continuation::deserialize(frame_header, payload, header_table)?),
+            0x0 => Frame::Data(Data::deserialize(&frame_header, payload)?),
+            0x1 => Frame::Headers(Headers::deserialize(&frame_header, payload, header_table)?),
+            0x2 => Frame::Priority(Priority::deserialize(&frame_header, payload)?),
+            0x3 => Frame::RstStream(RstStream::deserialize(&frame_header, payload)?),
+            0x4 => Frame::Settings(Settings::deserialize(&frame_header, payload)?),
+            0x5 => Frame::PushPromise(PushPromise::deserialize(&frame_header, payload, header_table)?),
+            0x6 => Frame::Ping(Ping::deserialize(&frame_header, payload)?),
+            0x7 => Frame::GoAway(Goaway::deserialize(&frame_header, payload)?),
+            0x8 => Frame::WindowUpdate(WindowUpdate::deserialize(&frame_header, payload)?),
+            0x9 => Frame::Continuation(Continuation::deserialize(&frame_header, payload, header_table)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",

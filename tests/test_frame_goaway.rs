@@ -25,7 +25,7 @@ pub fn test_goaway_frame() {
     bytes = bytes[9..].to_vec();
 
     // Deserialize the frame.
-    let frame = Frame::deserialize(frame_header, bytes, &mut header_table).unwrap();
+    let frame = Frame::deserialize(&frame_header, bytes, &mut header_table).unwrap();
 
     println!("{}", frame);
 }
