@@ -4,15 +4,15 @@ use http2::{
 };
 
 #[test]
-pub fn test_priority_frame() {
-    // Test parsing PRIORITY frame.
+pub fn test_ping_frame() {
+    // Test parsing PING frame with ack.
     let mut bytes: Vec<u8> = vec![
         0x00, 0x00, 0x05, // Length = 5
-        0x02, // Frame Type = PRIORITY
-        0x00, // Flags = None
-        0x00, 0x00, 0x00, 0x03, // Stream Identifier = 3
-        0x00, 0x00, 0x00, 0x05, // Stream Dependency = 5
-        0x03, // Weight = 3
+        0x06, // Frame Type = PING
+        0x01, // Flags = Ack
+        0x00, 0x00, 0x00, 0x08, // Stream Identifier = 8
+        0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x01, // Opaque Data = 1
     ];
 
     // Create a header table.

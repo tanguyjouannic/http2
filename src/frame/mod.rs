@@ -1,6 +1,9 @@
 pub mod data;
+pub mod goaway;
 pub mod headers;
+pub mod ping;
 pub mod priority;
+pub mod push_promise;
 pub mod rst_stream;
 pub mod settings;
 
@@ -8,8 +11,11 @@ use std::fmt;
 
 use crate::error::Http2Error;
 use crate::frame::data::Data;
+use crate::frame::goaway::Goaway;
 use crate::frame::headers::Headers;
+use crate::frame::ping::Ping;
 use crate::frame::priority::Priority;
+use crate::frame::push_promise::PushPromise;
 use crate::frame::rst_stream::RstStream;
 use crate::frame::settings::Settings;
 use crate::header::table::HeaderTable;
@@ -101,9 +107,9 @@ pub enum Frame {
     Priority(Priority),
     RstStream(RstStream),
     Settings(Settings),
-    // PushPromise(PushPromise),
-    // Ping(Ping),
-    // GoAway(GoAway),
+    PushPromise(PushPromise),
+    Ping(Ping),
+    GoAway(Goaway),
     // WindowUpdate(WindowUpdate),
     // Continuation(Continuation),
 }
@@ -131,6 +137,9 @@ impl Frame {
             0x2 => Frame::Priority(Priority::deserialize(frame_header, payload)?),
             0x3 => Frame::RstStream(RstStream::deserialize(frame_header, payload)?),
             0x4 => Frame::Settings(Settings::deserialize(frame_header, payload)?),
+            0x5 => Frame::PushPromise(PushPromise::deserialize(frame_header, payload, header_table)?),
+            0x6 => Frame::Ping(Ping::deserialize(frame_header, payload)?),
+            0x7 => Frame::GoAway(Goaway::deserialize(frame_header, payload)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -152,20 +161,14 @@ impl fmt::Display for Frame {
             Frame::Priority(priority) => write!(f, "{}", priority),
             Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
             Frame::Settings(settings) => write!(f, "{}", settings),
-            // Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
-            // Frame::Ping(ping) => write!(f, "{}", ping),
-            // Frame::GoAway(go_away) => write!(f, "{}", go_away),
+            Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
+            Frame::Ping(ping) => write!(f, "{}", ping),
+            Frame::GoAway(go_away) => write!(f, "{}", go_away),
             // Frame::WindowUpdate(window_update) => write!(f, "{}", window_update),
             // Frame::Continuation(continuation) => write!(f, "{}", continuation),
         }
     }
 }
-
-pub struct PushPromise {}
-
-pub struct Ping {}
-
-pub struct GoAway {}
 
 pub struct WindowUpdate {}
 

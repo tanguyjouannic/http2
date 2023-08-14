@@ -7,7 +7,7 @@ use http2::{
 pub fn test_rst_stream_frame() {
     // Test parsing RST_STREAM frame.
     let mut bytes: Vec<u8> = vec![
-        0x00, 0x00, 0x04, // Length = 31
+        0x00, 0x00, 0x04, // Length = 4
         0x03, // Frame Type = RST_STREAM
         0x00, // Flags = None
         0x00, 0x00, 0x00, 0x03, // Stream Identifier = 3

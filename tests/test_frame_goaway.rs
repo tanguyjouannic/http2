@@ -4,15 +4,17 @@ use http2::{
 };
 
 #[test]
-pub fn test_priority_frame() {
-    // Test parsing PRIORITY frame.
+pub fn test_goaway_frame() {
+    // Test parsing GOAWAY frame.
     let mut bytes: Vec<u8> = vec![
-        0x00, 0x00, 0x05, // Length = 5
-        0x02, // Frame Type = PRIORITY
+        0x00, 0x00, 0x05, // Length = 31
+        0x07, // Frame Type = GOAWAY
         0x00, // Flags = None
-        0x00, 0x00, 0x00, 0x03, // Stream Identifier = 3
-        0x00, 0x00, 0x00, 0x05, // Stream Dependency = 5
-        0x03, // Weight = 3
+        0x00, 0x00, 0x00, 0x06, // Stream Identifier = 6
+        0x00, 0x00, 0x00, 0x05, // Last Stream Identifier = 5
+        0x00, 0x00, 0x00, 0x01, // Error Code = 1
+        0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x2c, 0x20, 0x57, 
+        0x6f, 0x72, 0x6c, 0x64, 0x21, // Additional Debug Data = "Hello World!"
     ];
 
     // Create a header table.
