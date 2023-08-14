@@ -6,6 +6,7 @@ pub mod priority;
 pub mod push_promise;
 pub mod rst_stream;
 pub mod settings;
+pub mod window_update;
 
 use std::fmt;
 
@@ -18,6 +19,7 @@ use crate::frame::priority::Priority;
 use crate::frame::push_promise::PushPromise;
 use crate::frame::rst_stream::RstStream;
 use crate::frame::settings::Settings;
+use crate::frame::window_update::WindowUpdate;
 use crate::header::table::HeaderTable;
 
 /// HTTP/2 frame header.
@@ -110,7 +112,7 @@ pub enum Frame {
     PushPromise(PushPromise),
     Ping(Ping),
     GoAway(Goaway),
-    // WindowUpdate(WindowUpdate),
+    WindowUpdate(WindowUpdate),
     // Continuation(Continuation),
 }
 
@@ -140,6 +142,7 @@ impl Frame {
             0x5 => Frame::PushPromise(PushPromise::deserialize(frame_header, payload, header_table)?),
             0x6 => Frame::Ping(Ping::deserialize(frame_header, payload)?),
             0x7 => Frame::GoAway(Goaway::deserialize(frame_header, payload)?),
+            0x8 => Frame::WindowUpdate(WindowUpdate::deserialize(frame_header, payload)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -164,12 +167,10 @@ impl fmt::Display for Frame {
             Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
             Frame::Ping(ping) => write!(f, "{}", ping),
             Frame::GoAway(go_away) => write!(f, "{}", go_away),
-            // Frame::WindowUpdate(window_update) => write!(f, "{}", window_update),
+            Frame::WindowUpdate(window_update) => write!(f, "{}", window_update),
             // Frame::Continuation(continuation) => write!(f, "{}", continuation),
         }
     }
 }
-
-pub struct WindowUpdate {}
 
 pub struct Continuation {}

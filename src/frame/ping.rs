@@ -53,7 +53,7 @@ impl Ping {
         // Check if the payload has the correct length.
         if payload.len() != 8 {
             return Err(Http2Error::FrameError(format!(
-                "Invalid payload length for PING frame: {}",
+                "PING frame payload must be 8 bytes: received {} bytes",
                 payload.len()
             )));
         }
