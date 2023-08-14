@@ -1,7 +1,6 @@
 use std::fmt;
 
-use crate::{frame::FrameHeader, error::Http2Error};
-
+use crate::{error::Http2Error, frame::FrameHeader};
 
 /// DATA Frame flags.
 #[derive(Debug, PartialEq)]
@@ -12,9 +11,9 @@ pub enum DataFlag {
 
 impl DataFlag {
     /// Parse the flags from a byte.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `byte` - The byte to parse the flags from.
     pub fn parse_flags(byte: u8) -> Vec<DataFlag> {
         let mut flags: Vec<DataFlag> = Vec::new();
@@ -51,15 +50,15 @@ impl DataFlag {
 #[derive(Debug)]
 pub struct Data {
     header: FrameHeader,
-    data: Vec<u8>,
     parsed_flags: Vec<DataFlag>,
+    data: Vec<u8>,
 }
 
 impl Data {
     /// Deserialize a DATA frame from a frame header and a payload.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `header` - The frame header.
     /// * `payload` - The frame payload.
     pub fn deserialize(header: FrameHeader, mut payload: Vec<u8>) -> Result<Self, Http2Error> {
@@ -78,8 +77,8 @@ impl Data {
 
         Ok(Self {
             header,
-            data: payload,
             parsed_flags,
+            data: payload,
         })
     }
 }
@@ -87,7 +86,7 @@ impl Data {
 impl fmt::Display for Data {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Data Frame\n")?;
+        write!(f, "DATA Frame\n")?;
         write!(f, "Parsed Flags: {:?}\n", self.parsed_flags)?;
         write!(f, "Data: {}\n", String::from_utf8_lossy(&self.data))
     }

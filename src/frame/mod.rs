@@ -1,6 +1,7 @@
 pub mod data;
 pub mod headers;
 pub mod priority;
+pub mod rst_stream;
 
 use std::fmt;
 
@@ -8,6 +9,7 @@ use crate::error::Http2Error;
 use crate::frame::data::Data;
 use crate::frame::headers::Headers;
 use crate::frame::priority::Priority;
+use crate::frame::rst_stream::RstStream;
 use crate::header::table::HeaderTable;
 
 /// HTTP/2 frame header.
@@ -66,7 +68,10 @@ impl TryFrom<&[u8]> for FrameHeader {
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         // Check if the bytes stream is exactly 9 bytes.
         if bytes.len() != 9 {
-            return Err(Http2Error::FrameError(format!("Frame header length is not 9: {}", bytes.len())));
+            return Err(Http2Error::FrameError(format!(
+                "Frame header length is not 9: {}",
+                bytes.len()
+            )));
         }
 
         // Retrieve the frame header fields.
@@ -92,7 +97,7 @@ pub enum Frame {
     Data(Data),
     Headers(Headers),
     Priority(Priority),
-    // RstStream(RstStream),
+    RstStream(RstStream),
     // Settings(Settings),
     // PushPromise(PushPromise),
     // Ping(Ping),
@@ -103,21 +108,26 @@ pub enum Frame {
 
 impl Frame {
     /// Deserialize a frame based on a frame header and payload.
-    /// 
+    ///
     /// The payload has to have a length equal to the length in the frame header.
     /// The header table is updated if necessary.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `frame_header` - The frame header.
     /// * `payload` - The frame payload.
     /// * `header_table` - The header table.
-    pub fn deserialize(frame_header: FrameHeader, payload: Vec<u8>, header_table: &mut HeaderTable) -> Result<Self, Http2Error> {
+    pub fn deserialize(
+        frame_header: FrameHeader,
+        payload: Vec<u8>,
+        header_table: &mut HeaderTable,
+    ) -> Result<Self, Http2Error> {
         // Deserialize the frame depending on the frame type in the header.
         let frame = match frame_header.frame_type() {
             0x0 => Frame::Data(Data::deserialize(frame_header, payload)?),
             0x1 => Frame::Headers(Headers::deserialize(frame_header, payload, header_table)?),
             0x2 => Frame::Priority(Priority::deserialize(frame_header, payload)?),
+            0x3 => Frame::RstStream(RstStream::deserialize(frame_header, payload)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -137,7 +147,7 @@ impl fmt::Display for Frame {
             Frame::Data(data) => write!(f, "{}", data),
             Frame::Headers(headers) => write!(f, "{}", headers),
             Frame::Priority(priority) => write!(f, "{}", priority),
-            // Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
+            Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
             // Frame::Settings(settings) => write!(f, "{}", settings),
             // Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
             // Frame::Ping(ping) => write!(f, "{}", ping),
@@ -147,10 +157,6 @@ impl fmt::Display for Frame {
         }
     }
 }
-
-pub struct RstStream {}
-
-pub struct Settings {}
 
 pub struct PushPromise {}
 

@@ -201,7 +201,10 @@ impl HeaderField {
         header_table: &mut HeaderTable,
     ) -> HeaderRepresentation {
         if let Some(index) = header_table.contains_name(self) {
-            return HeaderRepresentation::NeverIndexedIndexedName(index.into(), self.value().into());
+            return HeaderRepresentation::NeverIndexedIndexedName(
+                index.into(),
+                self.value().into(),
+            );
         }
 
         HeaderRepresentation::NeverIndexedNewName(self.name().into(), self.value().into())
