@@ -1,3 +1,4 @@
+pub mod continuation;
 pub mod data;
 pub mod goaway;
 pub mod headers;
@@ -11,6 +12,7 @@ pub mod window_update;
 use std::fmt;
 
 use crate::error::Http2Error;
+use crate::frame::continuation::Continuation;
 use crate::frame::data::Data;
 use crate::frame::goaway::Goaway;
 use crate::frame::headers::Headers;
@@ -113,7 +115,7 @@ pub enum Frame {
     Ping(Ping),
     GoAway(Goaway),
     WindowUpdate(WindowUpdate),
-    // Continuation(Continuation),
+    Continuation(Continuation),
 }
 
 impl Frame {
@@ -143,6 +145,7 @@ impl Frame {
             0x6 => Frame::Ping(Ping::deserialize(frame_header, payload)?),
             0x7 => Frame::GoAway(Goaway::deserialize(frame_header, payload)?),
             0x8 => Frame::WindowUpdate(WindowUpdate::deserialize(frame_header, payload)?),
+            0x9 => Frame::Continuation(Continuation::deserialize(frame_header, payload, header_table)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -168,9 +171,7 @@ impl fmt::Display for Frame {
             Frame::Ping(ping) => write!(f, "{}", ping),
             Frame::GoAway(go_away) => write!(f, "{}", go_away),
             Frame::WindowUpdate(window_update) => write!(f, "{}", window_update),
-            // Frame::Continuation(continuation) => write!(f, "{}", continuation),
+            Frame::Continuation(continuation) => write!(f, "{}", continuation),
         }
     }
 }
-
-pub struct Continuation {}
