@@ -1,13 +1,13 @@
 use http2::{
-    frame::{Frame, FrameHeader},
+    frame::Frame,
     header::table::HeaderTable,
 };
 
 #[test]
 pub fn test_push_promise_frame() {
     // Test parsing PUSH_PROMISE with padding and end_headers.
-    let mut bytes: Vec<u8> = vec![
-        0x00, 0x00, 0x1d, // Length = 31
+    let bytes: Vec<u8> = vec![
+        0x00, 0x00, 0x1e, // Length = 30
         0x05, // Frame Type = PUSH_PROMISE
         0x0c, // Flags = [Padded, End_Headers]
         0x00, 0x00, 0x00, 0x03, // Stream Identifier = 3
@@ -23,15 +23,7 @@ pub fn test_push_promise_frame() {
         0x01, 0x02, 0x03, 0x04, 0x05, // Padding
     ];
 
-    // Create a header table.
     let mut header_table = HeaderTable::new(4096);
-
-    // Retrieve the frame header.
-    let frame_header: FrameHeader = bytes[0..9].try_into().unwrap();
-    bytes = bytes[9..].to_vec();
-
-    // Deserialize the frame.
-    let frame = Frame::deserialize(&frame_header, bytes, &mut header_table).unwrap();
-
+    let frame = Frame::deserialize(bytes, &mut header_table).unwrap();
     println!("{}", frame);
 }

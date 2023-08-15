@@ -1,12 +1,12 @@
 use http2::{
-    frame::{Frame, FrameHeader},
+    frame::Frame,
     header::table::HeaderTable,
 };
 
 #[test]
 pub fn test_continuation_frame() {
     // Test parsing CONTINUATION frame with end headers.
-    let mut bytes: Vec<u8> = vec![
+    let bytes: Vec<u8> = vec![
         0x00, 0x00, 0x14, // Length = 20
         0x09, // Frame Type = CONTINUATION
         0x04, // Flags = Ack
@@ -20,15 +20,7 @@ pub fn test_continuation_frame() {
         // :authority: www.example.com
     ];
 
-    // Create a header table.
     let mut header_table = HeaderTable::new(4096);
-
-    // Retrieve the frame header.
-    let frame_header: FrameHeader = bytes[0..9].try_into().unwrap();
-    bytes = bytes[9..].to_vec();
-
-    // Deserialize the frame.
-    let frame = Frame::deserialize(&frame_header, bytes, &mut header_table).unwrap();
-
+    let frame = Frame::deserialize(bytes, &mut header_table).unwrap();
     println!("{}", frame);
 }

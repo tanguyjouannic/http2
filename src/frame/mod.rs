@@ -24,6 +24,61 @@ use crate::frame::settings::Settings;
 use crate::frame::window_update::WindowUpdate;
 use crate::header::table::HeaderTable;
 
+
+/// HTTP/2 frame.
+/// 
+/// All frames begin with a fixed 9-octet header followed by a variable-
+/// length payload.
+/// 
+///  +-----------------------------------------------+
+///  |                 Length (24)                   |
+///  +---------------+---------------+---------------+
+///  |   Type (8)    |   Flags (8)   |
+///  +-+-------------+---------------+-------------------------------+
+///  |R|                 Stream Identifier (31)                      |
+///  +=+=============================================================+
+///  |                   Frame Payload (0...)                      ...
+///  +---------------------------------------------------------------+
+#[derive(Debug)]
+pub struct Frame {
+    header: FrameHeader,
+    payload: FramePayload,
+}
+
+impl Frame {
+    pub fn deserialize(bytes: Vec<u8>, header_table: &mut HeaderTable) -> Result<Frame, Http2Error> {
+        // Try to extract the frame header from the bytes stream.
+        let frame_header = FrameHeader::try_from(&bytes[..9])?;
+
+        // Check if the frame payload length is equal to the length in the frame header.
+        if bytes.len() - 9 > frame_header.payload_length() {
+            return Err(Http2Error::FrameError(format!(
+                "Frame payload length is not equal to the length of the deserialized frame header : {} != {}",
+                bytes.len() - 9,
+                frame_header.payload_length()
+            )));
+        }
+
+        // Try to extract the frame payload from the bytes stream.
+        let frame_payload = FramePayload::deserialize(&frame_header, bytes[9..].to_vec(), header_table)?;
+
+        Ok(Frame {
+            header: frame_header,
+            payload: frame_payload,
+        })
+    }
+}
+
+impl fmt::Display for Frame {
+    /// Display the Frame.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}\n", self.header)?;
+        write!(f, "{}", self.payload)?;
+
+        Ok(())
+    }
+}
+
 /// HTTP/2 frame header.
 ///
 ///  +-----------------------------------------------+
@@ -35,7 +90,7 @@ use crate::header::table::HeaderTable;
 ///  +-+-------------------------------------------------------------+
 #[derive(Debug)]
 pub struct FrameHeader {
-    payload_length: u32,
+    payload_length: usize,
     frame_type: u8,
     flags: u8,
     reserved: bool,
@@ -53,7 +108,7 @@ impl FrameHeader {
     /// * `reserved` - The reserved bit of the frame.
     /// * `stream_identifier` - The stream identifier of the frame.
     pub fn new(
-        payload_length: u32,
+        payload_length: usize,
         frame_type: u8,
         flags: u8,
         reserved: bool,
@@ -69,7 +124,7 @@ impl FrameHeader {
     }
 
     /// Get the length of the frame.
-    pub fn payload_length(&self) -> u32 {
+    pub fn payload_length(&self) -> usize {
         self.payload_length
     }
 
@@ -112,7 +167,7 @@ impl TryFrom<&[u8]> for FrameHeader {
         }
 
         // Retrieve the frame header fields.
-        let payload_length = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]);
+        let payload_length = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]) as usize;
         let frame_type = bytes[3];
         let flags = bytes[4];
         let reserved = (bytes[5] >> 7) != 0;
@@ -128,22 +183,41 @@ impl TryFrom<&[u8]> for FrameHeader {
     }
 }
 
-/// HTTP/2 frame.
-#[derive(Debug)]
-pub enum Frame {
-    Data(Data),
-    Headers(Headers),
-    Priority(Priority),
-    RstStream(RstStream),
-    Settings(Settings),
-    PushPromise(PushPromise),
-    Ping(Ping),
-    GoAway(Goaway),
-    WindowUpdate(WindowUpdate),
-    Continuation(Continuation),
+impl fmt::Display for FrameHeader {
+    /// Display the Frame Header.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Frame Header\n")?;
+        write!(f, "Length: {}\n", self.payload_length)?;
+        write!(f, "Type: {}\n", self.frame_type)?;
+        write!(f, "Flags: {}\n", self.flags)?;
+        write!(f, "Reserved: {}\n", self.reserved)?;
+        write!(f, "Stream Identifier: {}\n", self.stream_identifier)?;
+
+        Ok(())
+    }
 }
 
-impl Frame {
+
+/// HTTP/2 frame payload.
+/// 
+///  +---------------------------------------------------------------+
+///  |                   Frame Payload (0...)                      ...
+///  +---------------------------------------------------------------+
+#[derive(Debug)]
+pub enum FramePayload {
+    DataPayload(Data),
+    HeadersPayload(Headers),
+    PriorityPayload(Priority),
+    RstStreamPayload(RstStream),
+    SettingsPayload(Settings),
+    PushPromisePayload(PushPromise),
+    PingPayload(Ping),
+    GoAwayPayload(Goaway),
+    WindowUpdatePayload(WindowUpdate),
+    ContinuationPayload(Continuation),
+}
+
+impl FramePayload {
     /// Deserialize a frame based on a frame header and payload.
     ///
     /// The payload has to have a length equal to the length in the frame header.
@@ -161,16 +235,16 @@ impl Frame {
     ) -> Result<Self, Http2Error> {
         // Deserialize the frame depending on the frame type in the header.
         let frame = match frame_header.frame_type() {
-            0x0 => Frame::Data(Data::deserialize(&frame_header, payload)?),
-            0x1 => Frame::Headers(Headers::deserialize(&frame_header, payload, header_table)?),
-            0x2 => Frame::Priority(Priority::deserialize(&frame_header, payload)?),
-            0x3 => Frame::RstStream(RstStream::deserialize(&frame_header, payload)?),
-            0x4 => Frame::Settings(Settings::deserialize(&frame_header, payload)?),
-            0x5 => Frame::PushPromise(PushPromise::deserialize(&frame_header, payload, header_table)?),
-            0x6 => Frame::Ping(Ping::deserialize(&frame_header, payload)?),
-            0x7 => Frame::GoAway(Goaway::deserialize(&frame_header, payload)?),
-            0x8 => Frame::WindowUpdate(WindowUpdate::deserialize(&frame_header, payload)?),
-            0x9 => Frame::Continuation(Continuation::deserialize(&frame_header, payload, header_table)?),
+            0x0 => FramePayload::DataPayload(Data::deserialize(&frame_header, payload)?),
+            0x1 => FramePayload::HeadersPayload(Headers::deserialize(&frame_header, payload, header_table)?),
+            0x2 => FramePayload::PriorityPayload(Priority::deserialize(&frame_header, payload)?),
+            0x3 => FramePayload::RstStreamPayload(RstStream::deserialize(&frame_header, payload)?),
+            0x4 => FramePayload::SettingsPayload(Settings::deserialize(&frame_header, payload)?),
+            0x5 => FramePayload::PushPromisePayload(PushPromise::deserialize(&frame_header, payload, header_table)?),
+            0x6 => FramePayload::PingPayload(Ping::deserialize(&frame_header, payload)?),
+            0x7 => FramePayload::GoAwayPayload(Goaway::deserialize(&frame_header, payload)?),
+            0x8 => FramePayload::WindowUpdatePayload(WindowUpdate::deserialize(&frame_header, payload)?),
+            0x9 => FramePayload::ContinuationPayload(Continuation::deserialize(&frame_header, payload, header_table)?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Unknown frame type: {}",
@@ -183,20 +257,21 @@ impl Frame {
     }
 }
 
-impl fmt::Display for Frame {
-    /// Display the Frame.
+impl fmt::Display for FramePayload {
+    /// Display the Frame Payload.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Frame Payload\n")?;
         match self {
-            Frame::Data(data) => write!(f, "{}", data),
-            Frame::Headers(headers) => write!(f, "{}", headers),
-            Frame::Priority(priority) => write!(f, "{}", priority),
-            Frame::RstStream(rst_stream) => write!(f, "{}", rst_stream),
-            Frame::Settings(settings) => write!(f, "{}", settings),
-            Frame::PushPromise(push_promise) => write!(f, "{}", push_promise),
-            Frame::Ping(ping) => write!(f, "{}", ping),
-            Frame::GoAway(go_away) => write!(f, "{}", go_away),
-            Frame::WindowUpdate(window_update) => write!(f, "{}", window_update),
-            Frame::Continuation(continuation) => write!(f, "{}", continuation),
+            FramePayload::DataPayload(data) => write!(f, "{}", data),
+            FramePayload::HeadersPayload(headers) => write!(f, "{}", headers),
+            FramePayload::PriorityPayload(priority) => write!(f, "{}", priority),
+            FramePayload::RstStreamPayload(rst_stream) => write!(f, "{}", rst_stream),
+            FramePayload::SettingsPayload(settings) => write!(f, "{}", settings),
+            FramePayload::PushPromisePayload(push_promise) => write!(f, "{}", push_promise),
+            FramePayload::PingPayload(ping) => write!(f, "{}", ping),
+            FramePayload::GoAwayPayload(go_away) => write!(f, "{}", go_away),
+            FramePayload::WindowUpdatePayload(window_update) => write!(f, "{}", window_update),
+            FramePayload::ContinuationPayload(continuation) => write!(f, "{}", continuation),
         }
     }
 }

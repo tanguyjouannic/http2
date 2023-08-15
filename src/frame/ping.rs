@@ -25,7 +25,7 @@ impl PingFlag {
     }
 }
 
-/// PING Frame structure.
+/// PING Frame payload.
 ///
 /// The PING frame (type=0x6) is a mechanism for measuring a minimal
 /// round-trip time from the sender, as well as determining whether an

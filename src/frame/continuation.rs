@@ -25,7 +25,7 @@ impl ContinuationFlag {
     }
 }
 
-/// CONTINUATION Frame structure.
+/// CONTINUATION Frame payload.
 ///
 /// The CONTINUATION frame (type=0x9) is used to continue a sequence of
 /// header block fragments. Any number of CONTINUATION frames can be 

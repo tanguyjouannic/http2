@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{error::Http2Error, frame::FrameHeader};
 
-/// PRIORITY Frame structure.
+/// PRIORITY Frame payload.
 ///
 /// The PRIORITY frame (type=0x2) specifies the sender-advised priority
 /// of a stream (Section 5.3).  It can be sent in any stream state,

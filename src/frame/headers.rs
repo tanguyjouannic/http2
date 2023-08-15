@@ -44,7 +44,7 @@ impl HeadersFlag {
     }
 }
 
-/// HEADERS Frame structure.
+/// HEADERS Frame payload.
 ///
 /// The HEADERS frame (type=0x1) is used to open a stream (Section 5.1),
 /// and additionally carries a header block fragment. HEADERS frames can

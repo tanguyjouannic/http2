@@ -30,7 +30,7 @@ impl PushPromiseFlag {
     }
 }
 
-/// PUSH_PROMISE Frame structure.
+/// PUSH_PROMISE Frame payload.
 ///
 /// The PUSH_PROMISE frame (type=0x5) is used to notify the peer endpoint
 /// in advance of streams the sender intends to initiate. The

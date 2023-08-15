@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{error::Http2Error, frame::FrameHeader};
 
-/// WINDOW_UPDATE Frame structure.
+/// WINDOW_UPDATE Frame payload.
 ///
 /// The WINDOW_UPDATE frame (type=0x8) is used to implement flow control.
 ///

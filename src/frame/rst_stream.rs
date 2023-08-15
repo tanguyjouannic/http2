@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{error::Http2Error, frame::FrameHeader};
 
-/// RST_STREAM Frame structure.
+/// RST_STREAM Frame payload.
 ///
 /// The RST_STREAM frame (type=0x3) allows for immediate termination of a
 /// stream.  RST_STREAM is sent to request cancellation of a stream or to

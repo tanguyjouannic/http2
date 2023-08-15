@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{error::Http2Error, frame::FrameHeader};
 
-/// GOAWAY Frame structure.
+/// GOAWAY Frame payload.
 ///
 /// The GOAWAY frame (type=0x7) is used to initiate shutdown of a
 /// connection or to signal serious error conditions. GOAWAY allows an

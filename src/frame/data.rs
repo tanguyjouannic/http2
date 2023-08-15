@@ -30,7 +30,7 @@ impl DataFlag {
     }
 }
 
-/// DATA Frame structure.
+/// DATA Frame payload.
 ///
 /// DATA frames (type=0x0) convey arbitrary, variable-length sequences of
 /// octets associated with a stream. One or more DATA frames are used,

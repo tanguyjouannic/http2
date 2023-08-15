@@ -102,7 +102,7 @@ impl SettingsParameter {
     }
 }
 
-/// SETTINGS Frame structure.
+/// SETTINGS Frame payload.
 ///
 /// The payload of a SETTINGS frame consists of zero or more parameters,
 /// each consisting of an unsigned 16-bit setting identifier and an

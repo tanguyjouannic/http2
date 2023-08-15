@@ -1,12 +1,12 @@
 use http2::{
-    frame::{Frame, FrameHeader},
+    frame::Frame,
     header::table::HeaderTable,
 };
 
 #[test]
 pub fn test_headers_frame() {
     // Test parsing HEADERS with padding and priority.
-    let mut bytes: Vec<u8> = vec![
+    let bytes: Vec<u8> = vec![
         0x00, 0x00, 0x1f, // Length = 31
         0x01, // Frame Type = HEADERS
         0x28, // Flags = [Priority, Padded]
@@ -24,15 +24,7 @@ pub fn test_headers_frame() {
         0x01, 0x02, 0x03, 0x04, 0x05, // Padding
     ];
 
-    // Create a header table.
     let mut header_table = HeaderTable::new(4096);
-
-    // Retrieve the frame header.
-    let frame_header: FrameHeader = bytes[0..9].try_into().unwrap();
-    bytes = bytes[9..].to_vec();
-
-    // Deserialize the frame.
-    let frame = Frame::deserialize(&frame_header, bytes, &mut header_table).unwrap();
-
+    let frame = Frame::deserialize(bytes, &mut header_table).unwrap();
     println!("{}", frame);
 }
