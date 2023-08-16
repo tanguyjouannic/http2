@@ -24,6 +24,8 @@ use crate::frame::settings::Settings;
 use crate::frame::window_update::WindowUpdate;
 use crate::header::table::HeaderTable;
 
+// TODO: Rework Frame.
+
 
 /// HTTP/2 frame.
 /// 
