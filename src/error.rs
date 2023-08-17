@@ -3,6 +3,7 @@ use std::fmt;
 /// An Error type for the HTTP2 library.
 #[derive(Debug)]
 pub enum Http2Error {
+    NotEnoughBytes(String),
     FrameError(String),
     HpackError(String),
     HuffmanDecodingError(String),
@@ -14,6 +15,7 @@ impl fmt::Display for Http2Error {
     /// Display a Http2Error.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Http2Error::NotEnoughBytes(message) => write!(f, "Not Enough Bytes: {}", message),
             Http2Error::FrameError(message) => write!(f, "Frame Error: {}", message),
             Http2Error::HpackError(message) => write!(f, "Hpack Error: {}", message),
             Http2Error::HuffmanDecodingError(message) => {

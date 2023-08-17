@@ -1,91 +1,64 @@
 use std::fmt;
 
-use crate::{error::Http2Error, frame::FrameHeader};
+use crate::error::Http2Error;
+use crate::frame::{FrameFlag, FrameHeader};
 
-/// DATA Frame flags.
 #[derive(Debug, PartialEq)]
-pub enum DataFlag {
-    EndStream,
-    Padded,
+pub struct DataFrame {
+    pub stream_id: u32,
+    pub end_stream: bool,
+    pub data: Vec<u8>,
 }
 
-impl DataFlag {
-    /// Deserialize the flags from a byte.
-    ///
-    /// # Arguments
-    ///
-    /// * `byte` - The byte to deserialize the flags from.
-    pub fn deserialize(byte: u8) -> Vec<DataFlag> {
-        let mut flags: Vec<DataFlag> = Vec::new();
+impl DataFrame {
+    pub fn deserialize_flags(byte: u8) -> Vec<FrameFlag> {
+        let mut frame_flags = Vec::new();
 
-        if byte & 0x1 != 0 {
-            flags.push(DataFlag::EndStream);
+        if (byte & 0x01) != 0 {
+            frame_flags.push(FrameFlag::EndStream);
         }
 
-        if byte & 0x8 != 0 {
-            flags.push(DataFlag::Padded);
+        if (byte & 0x08) != 0 {
+            frame_flags.push(FrameFlag::Padded);
         }
 
-        flags
+        frame_flags
     }
-}
 
-/// DATA Frame payload.
-///
-/// DATA frames (type=0x0) convey arbitrary, variable-length sequences of
-/// octets associated with a stream. One or more DATA frames are used,
-/// for instance, to carry HTTP request or response payloads.
-///
-/// DATA frames MAY also contain padding. Padding can be added to DATA
-/// frames to obscure the size of messages. Padding is a security
-/// feature
-///
-///  +---------------+
-///  |Pad Length? (8)|
-///  +---------------+-----------------------------------------------+
-///  |                            Data (*)                         ...
-///  +---------------------------------------------------------------+
-///  |                           Padding (*)                       ...
-///  +---------------------------------------------------------------+
-#[derive(Debug)]
-pub struct Data {
-    flags: Vec<DataFlag>,
-    data: Vec<u8>,
-}
-
-impl Data {
-    /// Deserialize a DATA frame from a frame header and a payload.
-    ///
-    /// # Arguments
-    ///
-    /// * `header` - The frame header.
-    /// * `payload` - The frame payload.
-    pub fn deserialize(header: &FrameHeader, mut payload: Vec<u8>) -> Result<Self, Http2Error> {
+    pub fn deserialize(
+        frame_header: &FrameHeader,
+        bytes: &mut Vec<u8>,
+    ) -> Result<Self, Http2Error> {
         // Deserialize the flags from the header.
-        let flags: Vec<DataFlag> = DataFlag::deserialize(header.flags());
+        let frame_flags: Vec<FrameFlag> = DataFrame::deserialize_flags(frame_header.frame_flags());
 
-        if flags.contains(&DataFlag::Padded) {
-            let pad_length = payload[0] as usize;
+        // Handle the padding if needed.
+        if frame_flags.contains(&FrameFlag::Padded) {
+            let pad_length = bytes[0] as usize;
 
             // Check that the padding length is not 0.
             if pad_length == 0 {
-                return Err(Http2Error::FrameError("Padding length is 0".to_string()));
+                return Err(Http2Error::FrameError(
+                    "Padding length invalid: found 0".to_string(),
+                ));
             }
-            payload = payload[1..payload.len() - pad_length].to_vec();
+            *bytes = bytes[1..frame_header.payload_length() as usize - pad_length].to_vec();
         }
 
         Ok(Self {
-            flags,
-            data: payload,
+            stream_id: frame_header.stream_identifier(),
+            end_stream: frame_flags.contains(&FrameFlag::EndStream),
+            data: bytes.clone(),
         })
     }
 }
 
-impl fmt::Display for Data {
+impl fmt::Display for DataFrame {
     /// Format a DATA frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DATA Frame\n")?;
-        write!(f, "Flags: {:?}\n", self.flags)?;
+        write!(f, "DATA\n")?;
+        write!(f, "Stream Identifier: {}\n", self.stream_id)?;
+        write!(f, "End Stream: {}\n", self.end_stream)?;
         write!(f, "Data: {}\n", String::from_utf8_lossy(&self.data))
     }
 }

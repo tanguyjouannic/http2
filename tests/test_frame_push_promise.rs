@@ -6,7 +6,7 @@ use http2::{
 #[test]
 pub fn test_push_promise_frame() {
     // Test parsing PUSH_PROMISE with padding and end_headers.
-    let bytes: Vec<u8> = vec![
+    let mut bytes: Vec<u8> = vec![
         0x00, 0x00, 0x1e, // Length = 30
         0x05, // Frame Type = PUSH_PROMISE
         0x0c, // Flags = [Padded, End_Headers]
@@ -24,6 +24,6 @@ pub fn test_push_promise_frame() {
     ];
 
     let mut header_table = HeaderTable::new(4096);
-    let frame = Frame::deserialize(bytes, &mut header_table).unwrap();
+    let frame = Frame::deserialize(&mut bytes, &mut header_table).unwrap();
     println!("{}", frame);
 }

@@ -1,12 +1,9 @@
-use http2::{
-    frame::Frame,
-    header::table::HeaderTable,
-};
+use http2::{frame::Frame, header::table::HeaderTable};
 
 #[test]
 pub fn test_settings_frame() {
     // Test parsing SETTINGS frame.
-    let bytes: Vec<u8> = vec![
+    let mut bytes: Vec<u8> = vec![
         0x00, 0x00, 0x0c, // Length = 12
         0x04, // Frame Type = SETTINGS
         0x00, // Flags = None
@@ -18,6 +15,6 @@ pub fn test_settings_frame() {
     ];
 
     let mut header_table = HeaderTable::new(4096);
-    let frame = Frame::deserialize(bytes, &mut header_table).unwrap();
+    let frame = Frame::deserialize(&mut bytes, &mut header_table).unwrap();
     println!("{}", frame);
 }

@@ -1,65 +1,38 @@
 use std::fmt;
 
-use crate::{error::Http2Error, frame::FrameHeader};
+use crate::error::Http2Error;
+use crate::frame::{FrameHeader, FramePriority};
 
-/// PRIORITY Frame payload.
-///
-/// The PRIORITY frame (type=0x2) specifies the sender-advised priority
-/// of a stream (Section 5.3).  It can be sent in any stream state,
-/// including idle or closed streams.
-///
-///  +-+-------------------------------------------------------------+
-///  |E|                  Stream Dependency (31)                     |
-///  +-+-------------+-----------------------------------------------+
-///  |   Weight (8)  |
-///  +-+-------------+
-#[derive(Debug)]
-pub struct Priority {
-    exclusivity: bool,
-    stream_dependency: u32,
-    weight: u8,
+#[derive(Debug, PartialEq)]
+
+pub struct PriorityFrame {
+    stream_id: u32,
+    frame_priority: FramePriority,
 }
 
-impl Priority {
-    /// Deserialize a PRIORITY frame from a frame header and a payload.
-    ///
-    /// # Arguments
-    ///
-    /// * `header` - The frame header.
-    /// * `payload` - The frame payload.
-    pub fn deserialize(header: &FrameHeader, payload: Vec<u8>) -> Result<Self, Http2Error> {
-        // Check if the payload has the correct length.
-        if payload.len() != 5 {
-            return Err(Http2Error::FrameError(format!(
-                "Invalid payload length for PRIORITY frame: {}",
-                payload.len()
-            )));
-        }
-
-        // Extract the exclusivity.
-        let exclusivity = (payload[0] >> 7) != 0;
-
-        // Extract the stream dependency.
-        let stream_dependency =
-            u32::from_be_bytes([payload[0] & 0b0111_1111, payload[1], payload[2], payload[3]]);
-
-        // Extract the weight.
-        let weight = payload[4];
-
+impl PriorityFrame {
+    pub fn deserialize(
+        frame_header: &FrameHeader,
+        bytes: &mut Vec<u8>,
+    ) -> Result<Self, Http2Error> {
         Ok(Self {
-            exclusivity,
-            stream_dependency,
-            weight,
+            stream_id: frame_header.stream_identifier(),
+            frame_priority: FramePriority::deserialize(bytes)?,
         })
     }
 }
 
-impl fmt::Display for Priority {
-    /// Format a DATA frame.
+impl fmt::Display for PriorityFrame {
+    /// Format a PRIORITY frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PRIORITY Frame\n")?;
-        write!(f, "Exclusivity: {:?}\n", self.exclusivity)?;
-        write!(f, "Stream Dependency: {:?}\n", self.stream_dependency)?;
-        write!(f, "Weight: {:?}\n", self.weight)
+        write!(f, "PRIORITY\n")?;
+        write!(f, "Stream Identifier: {}\n", self.stream_id)?;
+        write!(f, "Exclusive: {}\n", self.frame_priority.exclusive())?;
+        write!(
+            f,
+            "Stream Dependency: {}\n",
+            self.frame_priority.stream_dependency()
+        )?;
+        write!(f, "Weight: {}\n", self.frame_priority.weight())
     }
 }
