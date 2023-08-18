@@ -1,5 +1,6 @@
 mod data;
 mod headers;
+mod ping;
 mod priority;
 mod push_promise;
 mod rst_stream;
