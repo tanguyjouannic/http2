@@ -1,11 +1,12 @@
 use std::fmt;
 
 use crate::error::Http2Error;
-use crate::frame::{FrameHeader, FrameFlag};
+use crate::frame::{FrameFlag, FrameHeader};
 
 #[derive(Debug, PartialEq)]
 pub struct PingFrame {
-    pub opaque_data: Vec<u8>,
+    ack: bool,
+    opaque_data: Vec<u8>,
 }
 
 impl PingFrame {
@@ -25,24 +26,27 @@ impl PingFrame {
     ) -> Result<Self, Http2Error> {
         // Check if the bytes vector contains at least 8 bytes.
         if bytes.len() < 8 {
-            return Err(Http2Error::NotEnoughBytes(
-                format!("PING frame needs at least 8 bytes, found {}", bytes.len()),
-            ));
+            return Err(Http2Error::NotEnoughBytes(format!(
+                "PING frame needs at least 8 bytes, found {}",
+                bytes.len()
+            )));
         }
 
         // Deserialize the flags from the header.
-        let flags: Vec<FrameFlag> = SettingsFrame::deserialize_flags(frame_header.frame_flags());
+        let flags: Vec<FrameFlag> = PingFrame::deserialize_flags(frame_header.frame_flags());
 
-        // Retrieve the opaque data.
-        
+        Ok(PingFrame {
+            ack: flags.contains(&FrameFlag::Ack),
+            opaque_data: bytes[0..8].to_vec(),
+        })
     }
 }
 
-impl fmt::Display for RstStreamFrame {
-    /// Format a RST_STREAM frame.
+impl fmt::Display for PingFrame {
+    /// Format a PING frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "RST_STREAM\n")?;
-        write!(f, "Stream Identifier: {}\n", self.stream_id)?;
-        write!(f, "Error Code: {}\n", self.error_code)
+        write!(f, "PING\n")?;
+        write!(f, "Ack: {}\n", self.ack)?;
+        write!(f, "Opaque Data: {:?}\n", self.opaque_data)
     }
 }

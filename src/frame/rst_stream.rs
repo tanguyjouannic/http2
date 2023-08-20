@@ -16,9 +16,10 @@ impl RstStreamFrame {
     ) -> Result<Self, Http2Error> {
         // Check if the bytes stream has at least 4 bytes.
         if bytes.len() < 4 {
-            return Err(Http2Error::NotEnoughBytes(
-                format!("RST_STREAM frame needs at least 4 bytes, found {}", bytes.len()),
-            ));
+            return Err(Http2Error::NotEnoughBytes(format!(
+                "RST_STREAM frame needs at least 4 bytes, found {}",
+                bytes.len()
+            )));
         }
 
         // Retrieve the error code.

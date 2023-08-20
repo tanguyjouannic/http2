@@ -44,7 +44,8 @@ impl HeadersFrame {
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
         // Deserialize the flags from the header.
-        let frame_flags: Vec<FrameFlag> = HeadersFrame::deserialize_flags(frame_header.frame_flags());
+        let frame_flags: Vec<FrameFlag> =
+            HeadersFrame::deserialize_flags(frame_header.frame_flags());
 
         // Handle the padding if needed.
         if frame_flags.contains(&FrameFlag::Padded) {

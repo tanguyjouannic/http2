@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::error::Http2Error;
-use crate::frame::{FrameHeader, FrameFlag};
+use crate::frame::{FrameFlag, FrameHeader};
 use crate::header::list::HeaderList;
 use crate::header::table::HeaderTable;
 
@@ -35,7 +35,8 @@ impl PushPromiseFrame {
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
         // Deserialize the flags from the header.
-        let frame_flags: Vec<FrameFlag> = PushPromiseFrame::deserialize_flags(frame_header.frame_flags());
+        let frame_flags: Vec<FrameFlag> =
+            PushPromiseFrame::deserialize_flags(frame_header.frame_flags());
 
         // Handle the padding if needed.
         if frame_flags.contains(&FrameFlag::Padded) {
@@ -52,7 +53,8 @@ impl PushPromiseFrame {
 
         // Deserialize the promise parameters.
         let reserved: bool = (bytes[0] >> 7) != 0;
-        let promised_stream_id: u32 = u32::from_be_bytes([bytes[0] & 0x7F, bytes[1], bytes[2], bytes[3]]);
+        let promised_stream_id: u32 =
+            u32::from_be_bytes([bytes[0] & 0x7F, bytes[1], bytes[2], bytes[3]]);
         let header_list: HeaderList = HeaderList::decode(&mut bytes[4..].to_vec(), header_table)?;
 
         Ok(Self {
@@ -72,7 +74,11 @@ impl fmt::Display for PushPromiseFrame {
         write!(f, "Stream Identifier: {}\n", self.stream_id)?;
         write!(f, "End Headers: {}\n", self.end_headers)?;
         write!(f, "Reserved: {}\n", self.reserved)?;
-        write!(f, "Promised Stream Identifier: {}\n", self.promised_stream_id)?;
+        write!(
+            f,
+            "Promised Stream Identifier: {}\n",
+            self.promised_stream_id
+        )?;
         write!(f, "Header List:\n{}", self.header_list)
     }
 }

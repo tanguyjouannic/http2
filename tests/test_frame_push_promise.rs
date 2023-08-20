@@ -1,7 +1,4 @@
-use http2::{
-    frame::Frame,
-    header::table::HeaderTable,
-};
+use http2::{frame::Frame, header::table::HeaderTable};
 
 #[test]
 pub fn test_push_promise_frame() {

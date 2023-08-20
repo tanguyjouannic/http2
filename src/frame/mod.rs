@@ -1,17 +1,21 @@
+mod continuation;
 mod data;
+mod go_away;
 mod headers;
 mod ping;
 mod priority;
 mod push_promise;
 mod rst_stream;
 mod settings;
+mod window_update;
 
 use std::fmt;
 
 use crate::error::Http2Error;
 use crate::frame::{
-    data::DataFrame, headers::HeadersFrame, priority::PriorityFrame, rst_stream::RstStreamFrame,
-    settings::SettingsFrame, push_promise::PushPromiseFrame,
+    continuation::ContinuationFrame, data::DataFrame, go_away::GoAwayFrame, headers::HeadersFrame,
+    ping::PingFrame, priority::PriorityFrame, push_promise::PushPromiseFrame,
+    rst_stream::RstStreamFrame, settings::SettingsFrame, window_update::WindowUpdateFrame,
 };
 use crate::header::table::HeaderTable;
 
@@ -23,10 +27,10 @@ pub enum Frame {
     RstStream(RstStreamFrame),
     Settings(SettingsFrame),
     PushPromise(PushPromiseFrame),
-    // Ping(PingFrame),
-    // GoAway(GoAwayFrame),
-    // WindowUpdate(WindowUpdateFrame),
-    // Continuation(ContinuationFrame),
+    Ping(PingFrame),
+    GoAway(GoAwayFrame),
+    WindowUpdate(WindowUpdateFrame),
+    Continuation(ContinuationFrame),
 }
 
 impl Frame {
@@ -68,6 +72,14 @@ impl Frame {
                 &mut bytes,
                 header_table,
             )?),
+            0x06 => Frame::Ping(PingFrame::deserialize(&frame_header, &mut bytes)?),
+            0x07 => Frame::GoAway(GoAwayFrame::deserialize(&frame_header, &mut bytes)?),
+            0x08 => Frame::WindowUpdate(WindowUpdateFrame::deserialize(&frame_header, &mut bytes)?),
+            0x09 => Frame::Continuation(ContinuationFrame::deserialize(
+                &frame_header,
+                &mut bytes,
+                header_table,
+            )?),
             _ => {
                 return Err(Http2Error::FrameError(format!(
                     "Could not deserialize Frame: unknown frame type {}",
@@ -93,6 +105,10 @@ impl fmt::Display for Frame {
             Frame::RstStream(frame) => write!(f, "{}", frame),
             Frame::Settings(frame) => write!(f, "{}", frame),
             Frame::PushPromise(frame) => write!(f, "{}", frame),
+            Frame::Ping(frame) => write!(f, "{}", frame),
+            Frame::GoAway(frame) => write!(f, "{}", frame),
+            Frame::WindowUpdate(frame) => write!(f, "{}", frame),
+            Frame::Continuation(frame) => write!(f, "{}", frame),
         }
     }
 }

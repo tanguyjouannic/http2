@@ -11,6 +11,7 @@ use crate::{error::Http2Error, frame::FrameHeader};
 ///  +-+-------------------------------------------------------------+
 #[derive(Debug)]
 pub struct WindowUpdate {
+    stream_id: u32,
     reserved: bool,
     window_size_increment: u32,
 }
@@ -38,6 +39,7 @@ impl WindowUpdate {
             u32::from_be_bytes([payload[0] & 0b0111_1111, payload[1], payload[2], payload[3]]);
 
         Ok(Self {
+            stream_id: header.stream_id(),
             reserved,
             window_size_increment,
         })
@@ -48,6 +50,7 @@ impl fmt::Display for WindowUpdate {
     /// Format a WINDOW_UPDATE frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WINDOW_UPDATE Frame\n")?;
+        write!(f, "Stream Identifier: {}\n", self.stream_id)?;
         write!(f, "Reserved: {}\n", self.reserved)?;
         write!(f, "Window Size Increment: {}", self.window_size_increment)?;
         Ok(())
