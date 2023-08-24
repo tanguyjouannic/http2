@@ -3,6 +3,13 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::frame::FrameHeader;
 
+/// WINDOW_UPDATE Frame.
+///
+/// The WINDOW_UPDATE frame (type=0x8) is used to implement flow control.
+///
+/// +-+-------------------------------------------------------------+
+/// |R|              Window Size Increment (31)                     |
+/// +-+-------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct WindowUpdateFrame {
     stream_id: u32,
@@ -11,14 +18,23 @@ pub struct WindowUpdateFrame {
 }
 
 impl WindowUpdateFrame {
+    /// Deserialize a WINDOW_UPDATE frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
     ) -> Result<Self, Http2Error> {
-        // Check if the bytes vector contains at least 4 bytes.
-        if bytes.len() < 4 {
-            return Err(Http2Error::NotEnoughBytes(format!(
-                "WINDOW_UPDATE frame needs at least 4 bytes, found {}",
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for WINDOW_UPDATE frame, found {}",
+                frame_header.payload_length(),
                 bytes.len()
             )));
         }

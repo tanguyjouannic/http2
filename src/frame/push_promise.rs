@@ -5,6 +5,23 @@ use crate::frame::{FrameFlag, FrameHeader};
 use crate::header::list::HeaderList;
 use crate::header::table::HeaderTable;
 
+/// PUSH_PROMISE Frame.
+///
+/// The PUSH_PROMISE frame (type=0x5) is used to notify the peer endpoint
+/// in advance of streams the sender intends to initiate. The
+/// PUSH_PROMISE frame includes the unsigned 31-bit identifier of the
+/// stream the endpoint plans to create along with a set of headers that
+/// provide additional context for the stream.
+/// 
+/// +---------------+
+/// |Pad Length? (8)|
+/// +-+-------------+-----------------------------------------------+
+/// |R|                  Promised Stream ID (31)                    |
+/// +-+-----------------------------+-------------------------------+
+/// |                   Header Block Fragment (*)                 ...
+/// +---------------------------------------------------------------+
+/// |                           Padding (*)                       ...
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct PushPromiseFrame {
     stream_id: u32,
@@ -15,6 +32,11 @@ pub struct PushPromiseFrame {
 }
 
 impl PushPromiseFrame {
+    /// Deserialize the flags from a byte.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte containing the flags.
     pub fn deserialize_flags(byte: u8) -> Vec<FrameFlag> {
         let mut frame_flags = Vec::new();
 
@@ -29,11 +51,29 @@ impl PushPromiseFrame {
         frame_flags
     }
 
+    /// Deserialize a PUSH_PROMISE frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
+    /// * `header_tables` - A mutable reference to a HeaderTable.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for PUSH_PROMISE frame, found {}",
+                frame_header.payload_length(),
+                bytes.len()
+            )));
+        }
+
         // Deserialize the flags from the header.
         let frame_flags: Vec<FrameFlag> =
             PushPromiseFrame::deserialize_flags(frame_header.frame_flags());
@@ -68,7 +108,7 @@ impl PushPromiseFrame {
 }
 
 impl fmt::Display for PushPromiseFrame {
-    /// Format a PRIORITY frame.
+    /// Format a  PUSH_PROMISE frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "PUSH_PROMISE\n")?;
         write!(f, "Stream Identifier: {}\n", self.stream_id)?;

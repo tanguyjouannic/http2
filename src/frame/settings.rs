@@ -3,6 +3,7 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::frame::{FrameFlag, FrameHeader};
 
+/// SETTINGS Frame parameters.
 #[derive(Debug, PartialEq)]
 pub enum SettingsParameter {
     HeaderTableSize(u32),
@@ -14,6 +15,12 @@ pub enum SettingsParameter {
 }
 
 impl SettingsParameter {
+    /// Deserialize a SETTINGS Frame parameter.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `parameter_id` - The parameter ID.
+    /// * `parameter_value` - The parameter value.
     pub fn deserialize(parameter_id: u16, parameter_value: u32) -> Result<Self, Http2Error> {
         match parameter_id {
             0x1 => Ok(Self::HeaderTableSize(parameter_value)),
@@ -50,6 +57,17 @@ impl fmt::Display for SettingsParameter {
     }
 }
 
+/// SETTINGS Frame.
+///
+/// The payload of a SETTINGS frame consists of zero or more parameters,
+/// each consisting of an unsigned 16-bit setting identifier and an
+/// unsigned 32-bit value.
+///
+/// +-------------------------------+
+/// |       Identifier (16)         |
+/// +-------------------------------+-------------------------------+
+/// |                        Value (32)                             |
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct SettingsFrame {
     ack: bool,
@@ -57,6 +75,11 @@ pub struct SettingsFrame {
 }
 
 impl SettingsFrame {
+    /// Deserialize the flags from a byte.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte containing the flags.
     pub fn deserialize_flags(byte: u8) -> Vec<FrameFlag> {
         let mut frame_flags = Vec::new();
 
@@ -67,10 +90,27 @@ impl SettingsFrame {
         frame_flags
     }
 
+    /// Deserialize a SETTINGS frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
     ) -> Result<Self, Http2Error> {
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for SETTINGS frame, found {}",
+                frame_header.payload_length(),
+                bytes.len()
+            )));
+        }
+
         // Check that the payload length is valid.
         if frame_header.payload_length() % 6 != 0 {
             return Err(Http2Error::FrameError(format!(
@@ -107,7 +147,7 @@ impl SettingsFrame {
 }
 
 impl fmt::Display for SettingsFrame {
-    /// Format a DATA frame.
+    /// Format a SETTINGS frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SETTINGS\n")?;
         write!(f, "Ack: {}\n", self.ack)?;

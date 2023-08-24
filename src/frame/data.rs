@@ -3,6 +3,23 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::frame::{FrameFlag, FrameHeader};
 
+/// DATA Frame.
+///
+/// DATA frames (type=0x0) convey arbitrary, variable-length sequences of
+/// octets associated with a stream. One or more DATA frames are used,
+/// for instance, to carry HTTP request or response payloads.
+///
+/// DATA frames MAY also contain padding. Padding can be added to DATA
+/// frames to obscure the size of messages. Padding is a security
+/// feature
+///
+/// +---------------+
+/// |Pad Length? (8)|
+/// +---------------+-----------------------------------------------+
+/// |                            Data (*)                         ...
+/// +---------------------------------------------------------------+
+/// |                           Padding (*)                       ...
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct DataFrame {
     pub stream_id: u32,
@@ -11,6 +28,11 @@ pub struct DataFrame {
 }
 
 impl DataFrame {
+    /// Deserialize the flags from a byte.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte containing the flags.
     pub fn deserialize_flags(byte: u8) -> Vec<FrameFlag> {
         let mut frame_flags = Vec::new();
 
@@ -25,10 +47,27 @@ impl DataFrame {
         frame_flags
     }
 
+    /// Deserialize a DATA frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
     ) -> Result<Self, Http2Error> {
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for DATA frame, found {}",
+                frame_header.payload_length(),
+                bytes.len()
+            )));
+        }
+
         // Deserialize the flags from the header.
         let frame_flags: Vec<FrameFlag> = DataFrame::deserialize_flags(frame_header.frame_flags());
 

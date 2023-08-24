@@ -19,6 +19,17 @@ use crate::frame::{
 };
 use crate::header::table::HeaderTable;
 
+/// HTTP/2 frame.
+/// 
+/// +-----------------------------------------------+
+/// |                 Length (24)                   |
+/// +---------------+---------------+---------------+
+/// |   Type (8)    |   Flags (8)   |
+/// +-+-------------+---------------+-------------------------------+
+/// |R|                 Stream Identifier (31)                      |
+/// +=+=============================================================+
+/// |                   Frame Payload (0...)                      ...
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub enum Frame {
     Data(DataFrame),
@@ -34,6 +45,12 @@ pub enum Frame {
 }
 
 impl Frame {
+    /// Deserialize a Frame.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `stream` - A mutable reference to a bytes vector.
+    /// * `header_table` - A mutable reference to a HeaderTable.
     pub fn deserialize(
         stream: &mut Vec<u8>,
         header_table: &mut HeaderTable,
@@ -113,6 +130,15 @@ impl fmt::Display for Frame {
     }
 }
 
+/// HTTP/2 frame header.
+///
+/// +-----------------------------------------------+
+/// |                 Length (24)                   |
+/// +---------------+---------------+---------------+
+/// |   Type (8)    |   Flags (8)   |
+/// +-+-------------+---------------+-------------------------------+
+/// |R|                 Stream Identifier (31)                      |
+/// +-+-------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct FrameHeader {
     payload_length: u32,
@@ -123,6 +149,13 @@ pub struct FrameHeader {
 }
 
 impl FrameHeader {
+    /// Deserialize a FrameHeader.
+    /// 
+    /// If the deserialization is successful, the FrameHeader is removed from the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(bytes: &mut Vec<u8>) -> Result<Self, Http2Error> {
         // Check if the bytes stream has at least 9 bytes.
         if bytes.len() < 9 {
@@ -172,6 +205,7 @@ impl FrameHeader {
     }
 }
 
+/// HTTP/2 frame flags.
 #[derive(Debug, PartialEq)]
 pub enum FrameFlag {
     EndStream,
@@ -181,6 +215,7 @@ pub enum FrameFlag {
     Ack,
 }
 
+/// HTTP/2 frame priority.
 #[derive(Debug, PartialEq)]
 pub struct FramePriority {
     exclusive: bool,
@@ -189,6 +224,13 @@ pub struct FramePriority {
 }
 
 impl FramePriority {
+    /// Deserialize a FramePriority.
+    /// 
+    /// If the deserialization is successful, the FramePriority is removed from the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(bytes: &mut Vec<u8>) -> Result<Self, Http2Error> {
         // Check if the bytes stream has at least 5 bytes.
         if bytes.len() < 5 {

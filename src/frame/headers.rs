@@ -5,6 +5,24 @@ use crate::frame::{FrameFlag, FrameHeader, FramePriority};
 use crate::header::list::HeaderList;
 use crate::header::table::HeaderTable;
 
+/// HEADERS Frame.
+///
+/// The HEADERS frame (type=0x1) is used to open a stream (Section 5.1),
+/// and additionally carries a header block fragment. HEADERS frames can
+/// be sent on a stream in the "idle", "reserved (local)", "open", or
+/// "half-closed (remote)" state.
+///
+/// +---------------+
+/// |Pad Length? (8)|
+/// +-+-------------+-----------------------------------------------+
+/// |E|                 Stream Dependency? (31)                     |
+/// +-+-------------+-----------------------------------------------+
+/// |  Weight? (8)  |
+/// +-+-------------+-----------------------------------------------+
+/// |                   Header Block Fragment (*)                 ...
+/// +---------------------------------------------------------------+
+/// |                           Padding (*)                       ...
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 
 pub struct HeadersFrame {
@@ -16,6 +34,11 @@ pub struct HeadersFrame {
 }
 
 impl HeadersFrame {
+    /// Deserialize the flags from a byte.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `byte` - The byte containing the flags.
     pub fn deserialize_flags(byte: u8) -> Vec<FrameFlag> {
         let mut frame_flags = Vec::new();
 
@@ -38,11 +61,29 @@ impl HeadersFrame {
         frame_flags
     }
 
+    /// Deserialize a HEADERS frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
+    /// * `header_tables` - A mutable reference to a HeaderTable.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
         header_table: &mut HeaderTable,
     ) -> Result<Self, Http2Error> {
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for HEADERS frame, found {}",
+                frame_header.payload_length(),
+                bytes.len()
+            )));
+        }
+
         // Deserialize the flags from the header.
         let frame_flags: Vec<FrameFlag> =
             HeadersFrame::deserialize_flags(frame_header.frame_flags());

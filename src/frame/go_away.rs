@@ -3,6 +3,21 @@ use std::fmt;
 use crate::error::Http2Error;
 use crate::frame::FrameHeader;
 
+/// GO_AWAY Frame payload.
+///
+/// The GO_AWAY frame (type=0x7) is used to initiate shutdown of a
+/// connection or to signal serious error conditions. GO_AWAY allows an
+/// endpoint to gracefully stop accepting new streams while still
+/// finishing processing of previously established streams. This enables
+/// administrative actions, like server maintenance.
+///
+/// +-+-------------------------------------------------------------+
+/// |R|                  Last-Stream-ID (31)                        |
+/// +-+-------------------------------------------------------------+
+/// |                      Error Code (32)                          |
+/// +---------------------------------------------------------------+
+/// |                  Additional Debug Data (*)                    |
+/// +---------------------------------------------------------------+
 #[derive(Debug, PartialEq)]
 pub struct GoAwayFrame {
     reserved: bool,
@@ -12,14 +27,23 @@ pub struct GoAwayFrame {
 }
 
 impl GoAwayFrame {
+    /// Deserialize a GO_AWAY frame.
+    /// 
+    /// The operation is destructive for the bytes vector.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `frame_header` - A reference to a FrameHeader.
+    /// * `bytes` - A mutable reference to a bytes vector.
     pub fn deserialize(
         frame_header: &FrameHeader,
         bytes: &mut Vec<u8>,
     ) -> Result<Self, Http2Error> {
-        // Check if the bytes vector contains at least 8 bytes.
-        if bytes.len() < 8 {
-            return Err(Http2Error::NotEnoughBytes(format!(
-                "GOAWAY frame needs at least 8 bytes, found {}",
+        // Check if the bytes has the right length.
+        if bytes.len() != frame_header.payload_length() as usize {
+            return Err(Http2Error::FrameError(format!(
+                "Expected {} bytes for GOAWAY frame, found {}",
+                frame_header.payload_length(),
                 bytes.len()
             )));
         }
@@ -45,9 +69,9 @@ impl GoAwayFrame {
 }
 
 impl fmt::Display for GoAwayFrame {
-    /// Format a GOAWAY frame.
+    /// Format a GO_AWAY frame.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GOAWAY\n")?;
+        write!(f, "GO_AWAY\n")?;
         write!(f, "Reserved: {}\n", self.reserved)?;
         write!(f, "Last Stream ID: {}\n", self.last_stream_id)?;
         write!(f, "Error Code: {}\n", self.error_code)?;
