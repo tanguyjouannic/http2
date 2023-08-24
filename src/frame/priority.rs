@@ -44,7 +44,7 @@ impl PriorityFrame {
         }
 
         Ok(Self {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             frame_priority: FramePriority::deserialize(bytes)?,
         })
     }

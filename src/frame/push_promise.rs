@@ -98,7 +98,7 @@ impl PushPromiseFrame {
         let header_list: HeaderList = HeaderList::decode(&mut bytes[4..].to_vec(), header_table)?;
 
         Ok(Self {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             end_headers: frame_flags.contains(&FrameFlag::EndHeaders),
             reserved,
             promised_stream_id,

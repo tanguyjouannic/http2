@@ -145,10 +145,52 @@ pub struct FrameHeader {
     frame_type: u8,
     frame_flags: u8,
     reserved: bool,
-    stream_identifier: u32,
+    stream_id: u32,
 }
 
 impl FrameHeader {
+    /// Create a new FrameHeader.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `payload_length` - The length of the frame payload.
+    /// * `frame_type` - The type of the frame.
+    /// * `frame_flags` - The flags of the frame.
+    /// * `reserved` - Reserved bit.
+    /// * `stream_id` - The stream identifier.
+    pub fn new(payload_length: u32, frame_type: u8, frame_flags: u8, reserved: bool, stream_id: u32) -> Self {
+        FrameHeader {
+            payload_length,
+            frame_type,
+            frame_flags,
+            reserved,
+            stream_id,
+        }
+    }
+
+    /// Serialize a FrameHeader.
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut bytes: Vec<u8> = Vec::new();
+
+        // Serialize the payload length.
+        bytes.extend_from_slice(&self.payload_length.to_be_bytes()[1..]);
+
+        // Serialize the frame type.
+        bytes.push(self.frame_type);
+
+        // Serialize the frame flags.
+        bytes.push(self.frame_flags);
+
+        // Serialize the stream identifier with reserved bit.
+        let mut stream_id: Vec<u8> = self.stream_id.to_be_bytes().to_vec();
+        if self.reserved {
+            stream_id[0] = stream_id[0] | 0x80;
+        }
+        bytes.extend_from_slice(&stream_id);
+
+        bytes
+    }
+
     /// Deserialize a FrameHeader.
     /// 
     /// If the deserialization is successful, the FrameHeader is removed from the bytes vector.
@@ -170,7 +212,7 @@ impl FrameHeader {
         let frame_type = bytes[3];
         let frame_flags = bytes[4];
         let reserved = (bytes[5] >> 7) != 0;
-        let stream_identifier = u32::from_be_bytes([bytes[5] & 0x7F, bytes[6], bytes[7], bytes[8]]);
+        let stream_id: u32 = u32::from_be_bytes([bytes[5] & 0x7F, bytes[6], bytes[7], bytes[8]]);
 
         // Remove the frame header from the bytes stream.
         *bytes = bytes[9..].to_vec();
@@ -180,7 +222,7 @@ impl FrameHeader {
             frame_type,
             frame_flags,
             reserved,
-            stream_identifier,
+            stream_id,
         })
     }
 
@@ -200,8 +242,8 @@ impl FrameHeader {
         self.reserved
     }
 
-    pub fn stream_identifier(&self) -> u32 {
-        self.stream_identifier
+    pub fn stream_id(&self) -> u32 {
+        self.stream_id
     }
 }
 

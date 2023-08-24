@@ -46,7 +46,7 @@ impl RstStreamFrame {
         *bytes = bytes[4..].to_vec();
 
         Ok(Self {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             error_code,
         })
     }

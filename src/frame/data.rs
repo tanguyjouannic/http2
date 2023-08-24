@@ -28,6 +28,73 @@ pub struct DataFrame {
 }
 
 impl DataFrame {
+    /// Create a new DATA frame.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `stream_id` - The stream identifier.
+    /// * `end_stream` - A boolean indicating if the DATA frame is the last frame of the stream.
+    /// * `data` - The data to send.
+    pub fn new(stream_id: u32, end_stream: bool, data: Vec<u8>) -> Self {
+        Self {
+            stream_id,
+            end_stream,
+            data,
+        }
+    }
+
+    /// Serialize a DATA frame.
+    /// 
+    /// Panic if the optional padding length is greater than 255.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `padding` - An optional bytes padding with max length of 255.
+    pub fn serialize(&self, padding: Option<Vec<u8>>) -> Vec<u8> {
+        // Build the payload.
+        let mut payload: Vec<u8> = Vec::new();
+        match padding.clone() {
+            Some(padding) => {
+                // Panic if the padding length is greater than 255.
+                if padding.len() > 255 {
+                    panic!("Padding length greater than 255");
+                }
+
+                payload.push(padding.len() as u8);
+                payload.append(&mut self.data.clone());
+                payload.append(&mut padding.clone());
+            },
+            None => {
+                payload.append(&mut self.data.clone());
+            }
+        }
+
+        // Build the flags bit.
+        let mut frame_flags: u8 = 0x0;
+        if self.end_stream {
+            frame_flags |= 0x01;
+        }
+        if padding.clone().is_some() {
+            frame_flags |= 0x08;
+        }
+
+        // Build the header.
+        let header = FrameHeader::new(
+            payload.len() as u32,
+            0x0, 
+            frame_flags,
+            false,
+            self.stream_id, 
+        );
+
+        // Serialize the frame.
+        let mut bytes: Vec<u8> = Vec::new();
+        bytes.append(&mut header.serialize());
+        bytes.append(&mut payload);
+
+        bytes
+    }
+
     /// Deserialize the flags from a byte.
     /// 
     /// # Arguments
@@ -85,7 +152,7 @@ impl DataFrame {
         }
 
         Ok(Self {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             end_stream: frame_flags.contains(&FrameFlag::EndStream),
             data: bytes.clone(),
         })

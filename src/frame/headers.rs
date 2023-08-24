@@ -111,7 +111,7 @@ impl HeadersFrame {
         let header_list = HeaderList::decode(bytes, header_table)?;
 
         Ok(Self {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             end_stream: frame_flags.contains(&FrameFlag::EndStream),
             end_headers: frame_flags.contains(&FrameFlag::EndHeaders),
             frame_priority,

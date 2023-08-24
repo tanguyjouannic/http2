@@ -40,7 +40,7 @@ impl WindowUpdateFrame {
         }
 
         Ok(WindowUpdateFrame {
-            stream_id: frame_header.stream_identifier(),
+            stream_id: frame_header.stream_id(),
             reserved: (bytes[0] >> 7) != 0,
             window_size_increment: u32::from_be_bytes([
                 bytes[0] & 0x7F,

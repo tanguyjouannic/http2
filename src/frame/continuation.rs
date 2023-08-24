@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::error::Http2Error;
-use crate::frame::{FrameFlag, FrameHeader};
+use crate::frame::{Frame, FrameFlag, FrameHeader};
 use crate::header::list::HeaderList;
 use crate::header::table::HeaderTable;
 
@@ -82,5 +82,12 @@ impl fmt::Display for ContinuationFrame {
         write!(f, "CONTINUATION\n")?;
         write!(f, "End Headers: {}\n", self.end_headers)?;
         write!(f, "Header List:\n{}", self.header_list)
+    }
+}
+
+impl Into<Frame> for ContinuationFrame {
+    /// Convert the CONTINUATION frame into a generic frame.
+    fn into(self) -> Frame {
+        Frame::Continuation(self)
     }
 }
