@@ -1,13 +1,13 @@
-mod continuation;
-mod data;
-mod go_away;
-mod headers;
-mod ping;
-mod priority;
-mod push_promise;
-mod rst_stream;
-mod settings;
-mod window_update;
+pub mod continuation;
+pub mod data;
+pub mod go_away;
+pub mod headers;
+pub mod ping;
+pub mod priority;
+pub mod push_promise;
+pub mod rst_stream;
+pub mod settings;
+pub mod window_update;
 
 use std::fmt;
 
